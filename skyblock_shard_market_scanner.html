@@ -2094,6 +2094,7 @@
     }
 
     // --- TRUE SLIPPAGE-ADJUSTED OPTIMAL BATCH (Q*) ---
+    // Strictly guarantees: NO ingredient shortfall, NO buyer demand shortfall, and maximum net profit
     function findOptimalBatchSize(shardIdx, taxRate, crocMultiplier, purseBudget) {
       let bestQ = 0;
       let maxProfit = -Infinity;
@@ -2106,9 +2107,9 @@
         return { optimalQ: 1, maxProfit: 0, maxAffordableQ: 1 };
       }
 
-      let totalInstantOrders = 0;
-      for (const t of prod.sell_summary) totalInstantOrders += t.amount;
-      const scanLimit = Math.min(totalInstantOrders, 300);
+      const resItem = solverResults.results[shardIdx];
+      const limitDepth = (resItem && resItem.profitableBuyDepth > 0) ? resItem.profitableBuyDepth : 1;
+      const scanLimit = Math.min(limitDepth, 300);
 
       for (let q = 1; q <= scanLimit; q++) {
         const plan = buildCraftingPlan(shardIdx, q, crocMultiplier);
@@ -2124,11 +2125,12 @@
           maxAffordableQ = q;
         }
 
-        if (sim.instantProfit > maxProfit) {
-          maxProfit = sim.instantProfit;
-          bestQ = q;
-        } else if (sim.instantProfit < maxProfit - 1000) {
-          break;
+        // Must have sufficient ingredient supply (no shortfall) and fully absorbed by buy bids
+        if (sim.allSupplyOk && !sim.isInstantDemandExceeded) {
+          if (sim.instantProfit > maxProfit) {
+            maxProfit = sim.instantProfit;
+            bestQ = q;
+          }
         }
       }
 
@@ -2400,15 +2402,20 @@
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 1)">1x</button>
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 24)">24x</button>
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 64)">64x</button>
-            <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 100)">100x</button>
-            ${profitableDepth > 0 ? `
-              <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, ${profitableDepth})" title="Set batch to profitable instant buy order depth (${profitableDepth} shards)">
-                Max Profitable Depth (${profitableDepth}x)
+            ${optAnalysis.optimalQ > 1 ? `
+              <button class="preset-btn highlight" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.optimalQ})" title="100% executable: All raw ingredients in stock with ZERO shortfall, all outputs absorbed by buyer bids, maximizing net instant profit">
+                🔥 Max Profitable Flip (${optAnalysis.optimalQ}x: +${formatCoinMillions(optAnalysis.maxProfit)})
+              </button>
+            ` : `
+              <button class="preset-btn highlight" onclick="setDrawerBatch(${shardIdx}, 1)">
+                Max Profitable (1x)
+              </button>
+            `}
+            ${(profitableDepth > 0 && profitableDepth !== optAnalysis.optimalQ) ? `
+              <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, ${profitableDepth})" title="Set batch to total profitable instant buy order depth (${profitableDepth} shards)">
+                Market Bids Cap (${profitableDepth}x)
               </button>
             ` : ''}
-            <button class="preset-btn highlight" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.optimalQ})" title="Stops at exact unit where rising marginal costs exceed falling instant-sell payout">
-              Optimal Peak (Q* = ${optAnalysis.optimalQ}x)
-            </button>
             ${purseBudget > 0 ? `
               <button class="preset-btn purse-cap" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.maxAffordableQ})">
                 Purse Cap (${optAnalysis.maxAffordableQ}x)
