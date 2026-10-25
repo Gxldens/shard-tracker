@@ -584,7 +584,7 @@
     .th-col1 { min-width: 145px; }
     .th-col2 { min-width: 110px; text-align: right; }
     .th-col3 { min-width: 110px; text-align: right; }
-    .th-col4 { min-width: 135px; text-align: right; }
+    .th-col4 { min-width: 175px; text-align: right; }
     .th-col5 { min-width: 150px; text-align: right; }
     .th-col6 { min-width: 130px; text-align: center; }
     .th-col7 { min-width: 115px; text-align: right; }
@@ -692,6 +692,42 @@
     }
 
     /* Col 4: Cost to Fuse */
+        .col4-top-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .col4-val-group {
+      text-align: right;
+    }
+
+    .badge-max-flip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.25;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    }
+
+    .badge-max-flip:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+      transform: translateY(-1px);
+    }
+
     .fuse-cost-val {
       font-family: 'JetBrains Mono', monospace;
       font-size: 13.5px;
@@ -2303,8 +2339,13 @@
 
             <!-- Col 4: Cost to Fuse -->
             <td class="col-tint-4">
-              <div class="fuse-cost-val">${costToFuseStr}</div>
-              <div class="cell-sublabel">coins per shard</div>
+              <div class="col4-top-wrap">
+                ${maxFlipBadgeHtml}
+                <div class="col4-val-group">
+                  <div class="fuse-cost-val">${costToFuseStr}</div>
+                  <div class="cell-sublabel">coins per shard</div>
+                </div>
+              </div>
               ${item.costToFuse !== Infinity ? `
                 <button class="btn-toggle-route" onclick="toggleRouteDrawer(${item.idx})">
                   <span>${isExpanded ? '▾ Hide recursive route' : '▸ View recursive route'}</span>
@@ -2356,6 +2397,19 @@
     }
 
     // --- DRAWER CONTROLS & RENDERING ---
+    function openRouteWithOptimalBatch(shardIdx, qty) {
+      if (expandedDrawerShardIdx !== shardIdx) {
+        expandedDrawerShardIdx = shardIdx;
+        renderTable();
+      }
+      renderDrawer(shardIdx);
+      if (qty && qty > 0) {
+        setDrawerBatch(shardIdx, qty);
+      }
+      const el = document.getElementById('row-' + shardIdx);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     function toggleRouteDrawer(shardIdx) {
       if (expandedDrawerShardIdx === shardIdx) {
         expandedDrawerShardIdx = null;
