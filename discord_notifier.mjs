@@ -13,10 +13,12 @@ export const CONFIG = {
   webhookUrl: process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1563852114629754960/rQgAQQdkLqzkUmu9-94RgrQ2UaDTfC0vgx4NFKeS0vhC_qc3mq1AT6dJJcx_zsNNSe87',
   
   // Alert Thresholds
-  minInstantProfit: 30000,      // Minimum coins profit for instant-sell arbitrage
-  minSellOfferProfit: 150000,   // Minimum coins profit for sell-offer listing
+  minInstantProfit: 200000,     // Minimum coins profit for instant-sell arbitrage (>= +200k/shard)
+  onlyInstantSell: true,        // When true, only alert instant-sell opportunities
+  minSellOfferProfit: 150000,   // Minimum coins profit for sell-offer listing (ignored when onlyInstantSell is true)
   minHourlyVelocity: 8,         // Minimum shards traded per hour (liquidity check)
   minRoiPct: 12,                // Minimum Return on Investment %
+  minProfitableDepth: 1,        // Minimum buyer bids in order book
   
   // Game Mechanics
   crocLevel: 10,                // Crocodile Pet Level (0 - 10)
@@ -301,8 +303,8 @@ export async function scanAndAlert(options = {}) {
       }
     }
 
-    const isInstantDeal = (instantProfit >= config.minInstantProfit);
-    const isSellOfferDeal = (fusionProfit >= config.minSellOfferProfit && roi >= config.minRoiPct && hourlyVelocity >= config.minHourlyVelocity);
+    const isInstantDeal = (instantProfit >= config.minInstantProfit && profitableBuyDepth >= (config.minProfitableDepth || 1));
+    const isSellOfferDeal = (!config.onlyInstantSell && fusionProfit >= config.minSellOfferProfit && roi >= config.minRoiPct && hourlyVelocity >= config.minHourlyVelocity);
 
     if (isInstantDeal || isSellOfferDeal) {
       // Find winning recipe ingredients
@@ -328,7 +330,7 @@ export async function scanAndAlert(options = {}) {
         profitableBuyDepth,
         routeStr,
         isInstantDeal,
-        priorityScore: isInstantDeal ? (instantProfit * 2 + fusionProfit) : fusionProfit
+        priorityScore: isInstantDeal ? instantProfit : fusionProfit
       });
     }
   }
@@ -358,8 +360,8 @@ export async function scanAndAlert(options = {}) {
     // Send Discord Embed
     console.log(`Sending alert for ${opp.shard.name}: Instant Profit: ${opp.instantProfit > 0 ? '+' : ''}${formatCoins(opp.instantProfit)}, Sell Offer: ${opp.fusionProfit > 0 ? '+' : ''}${formatCoins(opp.fusionProfit)}`);
     
-    const embedColor = opp.isInstantDeal ? 0xf59e0b : (RARITY_COLORS[opp.shard.rarity] || 0x38bdf8);
-    const dealBadge = opp.isInstantDeal ? '⚡ INSTANT-SELL FLIP' : '💎 HIGH MARGIN CRAFT';
+    const embedColor = opp.isInstantDeal ? 0x22c55e : (RARITY_COLORS[opp.shard.rarity] || 0x38bdf8);
+    const dealBadge = opp.isInstantDeal ? '⚡ INSTANT-SELL FLIP (>200k/shard)' : '💎 HIGH MARGIN CRAFT';
 
     const fields = [
       {
@@ -368,15 +370,13 @@ export async function scanAndAlert(options = {}) {
         inline: true
       },
       {
-        name: opp.isInstantDeal ? '🔥 Instant-Sell Profit' : '📈 Sell-Offer Profit',
-        value: opp.isInstantDeal 
-          ? `**${opp.instantProfit > 0 ? '+' : ''}${formatCoins(opp.instantProfit)}** coins` 
-          : `**${opp.fusionProfit > 0 ? '+' : ''}${formatCoins(opp.fusionProfit)}** (${opp.roi.toFixed(1)}% ROI)`,
+        name: '🔥 Instant-Sell Profit',
+        value: `**+${formatCoins(opp.instantProfit)}** coins / shard`,
         inline: true
       },
       {
-        name: '📊 Market Volume',
-        value: `~**${opp.hourlyVelocity}**/hr · **${opp.profitableBuyDepth}** instant depth`,
+        name: '📊 Market Volume & Depth',
+        value: `~**${opp.hourlyVelocity}**/hr · **${opp.profitableBuyDepth}** instant bids`,
         inline: true
       },
       {
@@ -386,10 +386,11 @@ export async function scanAndAlert(options = {}) {
       }
     ];
 
-    if (opp.isInstantDeal && opp.fusionProfit > opp.instantProfit) {
+    if (opp.profitableBuyDepth > 1) {
+      const batchPotential = opp.profitableBuyDepth * opp.instantProfit;
       fields.push({
-        name: '⏳ Sell-Offer Alternative',
-        value: `**${opp.fusionProfit > 0 ? '+' : ''}${formatCoins(opp.fusionProfit)}** (${opp.roi.toFixed(1)}% ROI if listed as sell offer)`,
+        name: '💎 Total Batch Potential',
+        value: `**+${formatCoins(batchPotential)}** coins across all ${opp.profitableBuyDepth} bids`,
         inline: true
       });
     }
