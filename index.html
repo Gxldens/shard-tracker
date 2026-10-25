@@ -2086,7 +2086,10 @@
         instantRevenueNet,
         instantProfit,
         sellOfferProfit,
-        instantDepthTotal
+        instantDepthTotal,
+        remSell,
+        filledInstantQty: plan.targetQty - remSell,
+        isInstantDemandExceeded: (remSell > 0)
       };
     }
 
@@ -2375,6 +2378,14 @@
 
       const optAnalysis = findOptimalBatchSize(shardIdx, taxRate, crocMultiplier, purseBudget);
 
+      const targetS = shardList[shardIdx];
+      let prod = bazaarData[targetS.internal_id];
+      if (!prod && SHARD_ALIASES[targetS.internal_id]) prod = bazaarData[SHARD_ALIASES[targetS.internal_id]];
+      let totalInstantDepth = 0;
+      if (prod && prod.sell_summary) {
+        for (const t of prod.sell_summary) totalInstantDepth += t.amount;
+      }
+
       let batchQty = 1;
       const existingInput = document.getElementById('batchQtyInput-' + shardIdx);
       if (existingInput) {
@@ -2389,9 +2400,15 @@
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="batchQtyInput-${shardIdx}" class="batch-input" value="${batchQty}" oninput="onDrawerBatchInput(${shardIdx}, this.value)" onblur="onDrawerBatchBlur(${shardIdx}, this)">
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 1)">1x</button>
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 24)">24x</button>
-            <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 40)">40x</button>
+            <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 64)">64x</button>
+            <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 100)">100x</button>
+            ${totalInstantDepth > 0 ? `
+              <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, ${totalInstantDepth})" title="Set batch to total instant buy orders available on Bazaar (${totalInstantDepth} shards)">
+                Max Depth (${totalInstantDepth}x)
+              </button>
+            ` : ''}
             <button class="preset-btn highlight" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.optimalQ})" title="Stops at exact unit where rising marginal costs exceed falling instant-sell payout">
-              Max Profitable Instant-Sell (Q* = ${optAnalysis.optimalQ}x)
+              Max Profitable (Q* = ${optAnalysis.optimalQ}x)
             </button>
             ${purseBudget > 0 ? `
               <button class="preset-btn purse-cap" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.maxAffordableQ})">
@@ -2466,16 +2483,22 @@
             <div class="stat-card-sub">in-game /fusionbox crafts</div>
           </div>
 
-          <!-- Displays warning if any ingredient has < 20 available in offers -->
+          <!-- Card 5: Order Book Supply & Demand Check -->
           <div class="stat-card">
-            <div class="stat-card-title">Order Book Supply</div>
+            <div class="stat-card-title">Order Book Supply & Demand</div>
             <div class="stat-card-val">
-              ${sim.hasIngredientBelow20 
-                ? '<span style="color:#f87171;">⚠️ Low Supply (&lt;20)</span>' 
-                : (sim.allSupplyOk ? '<span style="color:#4ade80;">✅ Sufficient</span>' : '<span style="color:#fbbf24;">⚠️ Shortfall</span>')}
+              ${!sim.allSupplyOk
+                ? '<span style="color:#f87171;">⚠️ Ingredient Shortfall</span>'
+                : (sim.isInstantDemandExceeded 
+                  ? '<span style="color:#fbbf24;">⚠️ Book Capped</span>'
+                  : '<span style="color:#4ade80;">✅ 100% Filled</span>')}
             </div>
             <div class="stat-card-sub">
-              ${sim.hasIngredientBelow20 ? 'Ingredient has &lt; 20 available in offers' : (sim.allSupplyOk ? 'Instant-buy fully filled' : 'High slippage on ingredients')}
+              ${!sim.allSupplyOk
+                ? 'Not enough ingredient offers to instant-buy'
+                : (sim.isInstantDemandExceeded 
+                  ? `Only ${sim.instantDepthTotal} instant bids (${sim.remSell} left over)`
+                  : `All ${safeQty} shards can be instant-sold (${sim.instantDepthTotal} bids available)`)}
             </div>
           </div>
 
