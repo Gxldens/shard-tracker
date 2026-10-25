@@ -1978,6 +1978,9 @@
       let hasIngredientBelow20 = false;
       const leafDetails = [];
 
+      const useBuyOrderForChameleon = document.getElementById('checkChameleonBuyOrder') ? document.getElementById('checkChameleonBuyOrder').checked : false;
+      const ingredientMode = document.getElementById('ingredientModeSelect') ? document.getElementById('ingredientModeSelect').value : 'instant';
+
       for (const [shardIdx, neededQty] of plan.rawLeaves.entries()) {
         const s = shardList[shardIdx];
         let prod = bazaarData[s.internal_id];
@@ -1987,7 +1990,15 @@
         let costForShard = 0;
         let availableSupply = 0;
 
-        if (prod && prod.buy_summary) {
+        const isBuyOrderMode = ((useBuyOrderForChameleon && s.internal_id === 'SHARD_CHAMELEON') || ingredientMode === 'buyOrder');
+
+        if (isBuyOrderMode) {
+          const buyOrderPrice = (prod && prod.sell_summary && prod.sell_summary.length > 0)
+            ? prod.sell_summary[0].pricePerUnit
+            : (solverResults ? solverResults.results[shardIdx]?.buyOrderPrice : 0) || 0;
+          costForShard = neededQty * buyOrderPrice;
+          availableSupply = 999999;
+        } else if (prod && prod.buy_summary) {
           for (let i = 0; i < prod.buy_summary.length; i++) {
             const tier = prod.buy_summary[i];
             availableSupply += tier.amount;
@@ -1999,18 +2010,18 @@
           }
         }
 
-        // Fix 5: Detect supply below 20 total shards
-        if (availableSupply < 20) {
+        // Detect supply below 20 total shards
+        if (!isBuyOrderMode && availableSupply < 20) {
           hasIngredientBelow20 = true;
         }
 
         let isLowSupply = false;
-        if (remaining > 0) {
+        if (!isBuyOrderMode && remaining > 0) {
           isLowSupply = true;
           allSupplyOk = false;
           const lastPrice = (prod && prod.buy_summary && prod.buy_summary.length > 0)
             ? prod.buy_summary[prod.buy_summary.length - 1].pricePerUnit
-            : (solverResults.results[shardIdx].sellOrderPrice || 0);
+            : (solverResults ? solverResults.results[shardIdx]?.sellOrderPrice : 0) || 0;
           costForShard += remaining * lastPrice;
         }
 
@@ -2025,8 +2036,9 @@
           costForShard,
           vwap,
           availableSupply,
-          isLowSupply,
-          isBelow20: (availableSupply < 20)
+          isLowSupply: isBuyOrderMode ? false : isLowSupply,
+          isBelow20: isBuyOrderMode ? false : (availableSupply < 20),
+          isBuyOrder: isBuyOrderMode
         });
       }
 
@@ -2484,12 +2496,14 @@
               </div>
               <div class="material-details">
                 <span>Total: ${formatCoinMillions(leaf.costForShard)}</span>
-                <span>@ ${leaf.vwap.toLocaleString(undefined, { maximumFractionDigits: 1 })}/ea</span>
+                <span>@ ${leaf.vwap.toLocaleString(undefined, { maximumFractionDigits: 1 })}/ea ${leaf.isBuyOrder ? '<span class="pill-badge" style="font-size:9.5px; color:#38bdf8; border-color:rgba(56,189,248,0.4); padding:1px 5px;">Buy Order</span>' : ''}</span>
               </div>
-              <div class="supply-badge ${leaf.isBelow20 ? 'critical' : (leaf.isLowSupply ? 'warn' : 'ok')}">
-                ${leaf.isBelow20 
-                  ? '⚠️ Very Low Supply: Only ' + leaf.availableSupply.toLocaleString() + ' in offers (&lt;20)' 
-                  : (leaf.isLowSupply ? '⚠️ Shortfall: ' + leaf.availableSupply.toLocaleString() + ' in offers' : '✅ ' + leaf.availableSupply.toLocaleString() + ' available in offers')}
+              <div class="supply-badge ${leaf.isBuyOrder ? 'ok' : (leaf.isBelow20 ? 'critical' : (leaf.isLowSupply ? 'warn' : 'ok'))}">
+                ${leaf.isBuyOrder 
+                  ? '📋 Buy Order Placed' 
+                  : (leaf.isBelow20 
+                    ? '⚠️ Very Low Supply: Only ' + leaf.availableSupply.toLocaleString() + ' in offers (&lt;20)' 
+                    : (leaf.isLowSupply ? '⚠️ Shortfall: ' + leaf.availableSupply.toLocaleString() + ' in offers' : '✅ ' + leaf.availableSupply.toLocaleString() + ' available in offers'))}
               </div>
             </div>
           `).join('')}
