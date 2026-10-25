@@ -2381,10 +2381,9 @@
       const targetS = shardList[shardIdx];
       let prod = bazaarData[targetS.internal_id];
       if (!prod && SHARD_ALIASES[targetS.internal_id]) prod = bazaarData[SHARD_ALIASES[targetS.internal_id]];
-      let totalInstantDepth = 0;
-      if (prod && prod.sell_summary) {
-        for (const t of prod.sell_summary) totalInstantDepth += t.amount;
-      }
+      
+      // Use profitableBuyDepth (matching Column 6 amber metric) so we never dump into lowball loss-making bids
+      const profitableDepth = resItem.profitableBuyDepth || 0;
 
       let batchQty = 1;
       const existingInput = document.getElementById('batchQtyInput-' + shardIdx);
@@ -2402,13 +2401,13 @@
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 24)">24x</button>
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 64)">64x</button>
             <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, 100)">100x</button>
-            ${totalInstantDepth > 0 ? `
-              <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, ${totalInstantDepth})" title="Set batch to total instant buy orders available on Bazaar (${totalInstantDepth} shards)">
-                Max Depth (${totalInstantDepth}x)
+            ${profitableDepth > 0 ? `
+              <button class="preset-btn" onclick="setDrawerBatch(${shardIdx}, ${profitableDepth})" title="Set batch to profitable instant buy order depth (${profitableDepth} shards)">
+                Max Profitable Depth (${profitableDepth}x)
               </button>
             ` : ''}
             <button class="preset-btn highlight" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.optimalQ})" title="Stops at exact unit where rising marginal costs exceed falling instant-sell payout">
-              Max Profitable (Q* = ${optAnalysis.optimalQ}x)
+              Optimal Peak (Q* = ${optAnalysis.optimalQ}x)
             </button>
             ${purseBudget > 0 ? `
               <button class="preset-btn purse-cap" onclick="setDrawerBatch(${shardIdx}, ${optAnalysis.maxAffordableQ})">
@@ -2497,8 +2496,8 @@
               ${!sim.allSupplyOk
                 ? 'Not enough ingredient offers to instant-buy'
                 : (sim.isInstantDemandExceeded 
-                  ? `Only ${sim.instantDepthTotal} instant bids (${sim.remSell} left over)`
-                  : `All ${safeQty} shards can be instant-sold (${sim.instantDepthTotal} bids available)`)}
+                  ? `Only ${resItem.profitableBuyDepth || sim.instantDepthTotal} profitable instant bids (${sim.remSell} left over)`
+                  : `All ${safeQty} shards can be instant-sold (${resItem.profitableBuyDepth || sim.instantDepthTotal} profitable bids available)`)}
             </div>
           </div>
 
