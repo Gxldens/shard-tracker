@@ -1,0 +1,25 @@
+name: SkyBlock Shard Scanner & Discord Alerts
+
+on:
+  schedule:
+    # Runs automatically every 10 minutes (24/7 in GitHub cloud for free)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows clicking "Run workflow" manually anytime
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scan Bazaar & Send Discord Alerts
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1563852114629754960/rQgAQQdkLqzkUmu9-94RgrQ2UaDTfC0vgx4NFKeS0vhC_qc3mq1AT6dJJcx_zsNNSe87' }}
+          DISCORD_USER_ID: ${{ secrets.DISCORD_USER_ID }}
+        run: node discord_notifier.mjs
