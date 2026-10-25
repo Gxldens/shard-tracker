@@ -2384,8 +2384,9 @@
       let prod = bazaarData[targetS.internal_id];
       if (!prod && SHARD_ALIASES[targetS.internal_id]) prod = bazaarData[SHARD_ALIASES[targetS.internal_id]];
       
+      const resItem = solverResults.results[shardIdx];
       // Use profitableBuyDepth (matching Column 6 amber metric) so we never dump into lowball loss-making bids
-      const profitableDepth = resItem.profitableBuyDepth || 0;
+      const profitableDepth = (resItem && resItem.profitableBuyDepth) ? resItem.profitableBuyDepth : 0;
 
       let batchQty = 1;
       const existingInput = document.getElementById('batchQtyInput-' + shardIdx);
