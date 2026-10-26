@@ -2313,6 +2313,19 @@
         // Fix 5: Check if winning route has < 20 supply in offers
         const hasLowSupplyRoute = (item.costToFuse !== Infinity && checkRouteHasLowSupply(item.idx));
 
+        // Optimal batch calculation for the quick preview badge
+        let maxFlipBadgeHtml = '';
+        if (item.costToFuse !== Infinity && item.profitableBuyDepth > 0) {
+          const opt = findOptimalBatchSize(item.idx, solverResults.taxRate, solverResults.crocMultiplier, solverResults.purseBudget);
+          if (opt && opt.maxProfit > 0) {
+            maxFlipBadgeHtml = `
+              <button class="badge-max-flip" onclick="event.stopPropagation(); openRouteWithOptimalBatch(${item.idx}, ${opt.optimalQ})" title="Max Profitable Flip: ${opt.optimalQ}x shards (+${formatCoinMillions(opt.maxProfit)} net instant profit). Click to view route.">
+                🔥 ${opt.optimalQ}x: +${formatCoinMillions(opt.maxProfit)}
+              </button>
+            `;
+          }
+        }
+
         html += `
           <tr class="data-row" id="row-${item.idx}">
             <!-- Col 1: # / Shard -->
