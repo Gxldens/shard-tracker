@@ -728,6 +728,73 @@
       transform: translateY(-1px);
     }
 
+    /* Fusion Efficiency & Profit Per Fusion Calculator */
+    .fusion-rate-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    .efficiency-calc-panel {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+
+    .efficiency-calc-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .efficiency-calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .eff-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: rgba(10, 15, 26, 0.55);
+      border: 1px solid rgba(30, 41, 59, 0.7);
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
+    .eff-col-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .eff-col-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .eff-unit {
+      font-family: var(--font-sans);
+      font-size: 9.5px;
+      font-weight: 400;
+      color: var(--text-dim);
+    }
+
     .fuse-cost-val {
       font-family: 'JetBrains Mono', monospace;
       font-size: 13.5px;
@@ -1217,6 +1284,7 @@
           <select id="rankSelect" class="select-input" onchange="onRankChange()">
             <option value="fusionProfit">Highest fusion profit (most → least)</option>
             <option value="instantProfit">Highest instant-sell profit (most → least)</option>
+            <option value="profitPerFusion">⚡ Highest profit / fusion (most time-efficient)</option>
             <option value="costToFuse">Lowest cost to fuse (least → most)</option>
             <option value="roi">Highest ROI % (profit / cost)</option>
             <option value="vol7d">Highest 7d bought volume (most → least)</option>
@@ -1914,7 +1982,8 @@
         };
       }
 
-      return {
+      // Calculate single-shard crafts and profit per fusion efficiency
+      const solverObj = {
         results,
         bestRecipe,
         recipeCost,
@@ -1926,6 +1995,29 @@
         purseBudget,
         buySummaryAvailable
       };
+      solverResults = solverObj;
+
+      for (let i = 0; i < numShards; i++) {
+        const item = results[i];
+        if (item.costToFuse !== Infinity && item.bestLevel > 0) {
+          const p1 = buildCraftingPlan(i, 1, crocMultiplier);
+          const c1 = Math.max(1, p1.totalCrafts || 1);
+          item.craftsNeeded1 = c1;
+          item.profitPerFusionInstant = (item.instantProfit > 0) ? (item.instantProfit / c1) : -Infinity;
+          item.profitPerFusionOffer = (item.fusionProfit > 0) ? (item.fusionProfit / c1) : -Infinity;
+          item.bestProfitPerFusion = Math.max(
+            item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : 0,
+            item.profitPerFusionOffer > 0 ? item.profitPerFusionOffer : 0
+          );
+        } else {
+          item.craftsNeeded1 = 1;
+          item.profitPerFusionInstant = -Infinity;
+          item.profitPerFusionOffer = -Infinity;
+          item.bestProfitPerFusion = 0;
+        }
+      }
+
+      return solverObj;
     }
 
     // --- RECURSIVE ROUTE & BATCH SLIPPAGE CALCULATOR ---
@@ -2259,6 +2351,8 @@
             return b.fusionProfit - a.fusionProfit;
           case 'instantProfit':
             return b.instantProfit - a.instantProfit;
+          case 'profitPerFusion':
+            return b.bestProfitPerFusion - a.bestProfitPerFusion;
           case 'costToFuse':
             return a.costToFuse - b.costToFuse;
           case 'roi':
@@ -2277,6 +2371,9 @@
           if (a.isInstantProfitable && !b.isInstantProfitable) return -1;
           if (!a.isInstantProfitable && b.isInstantProfitable) return 1;
           if (a.isInstantProfitable && b.isInstantProfitable) {
+            if (rankBy === 'profitPerFusion') {
+              return b.profitPerFusionInstant - a.profitPerFusionInstant;
+            }
             return b.instantProfit - a.instantProfit;
           }
           return baseCompare(a, b);
@@ -2372,6 +2469,11 @@
               <div class="profit-val ${item.fusionProfit < 0 ? 'negative' : ''}">${fusionProfitStr}</div>
               <div class="cell-sublabel" style="color:var(--accent-emerald-soft);">coins per shard</div>
               ${instantSellStr ? `<div class="instant-profit-sub">Instant sell: ${instantSellStr}</div>` : ''}
+              ${item.bestProfitPerFusion > 0 ? `
+                <div class="fusion-rate-sub" title="Profit divided by number of fusions needed. Producing 1 shard requires ${item.craftsNeeded1} in-game craft(s).">
+                  ⚡ +${formatCoinMillions(item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : item.profitPerFusionOffer)} / fusion <span style="color:var(--text-dim); font-size:9.5px;">(${item.craftsNeeded1}x)</span>
+                </div>
+              ` : ''}
             </td>
 
             <!-- Col 6: Outgoing Sell Offers & Instant Depth -->
@@ -2523,6 +2625,17 @@
 
       const isPurseExceeded = (purseBudget > 0 && sim.purseBuffer > purseBudget);
 
+      const totalCrafts = Math.max(1, plan.totalCrafts || 1);
+      const effProfitInstant = sim.instantProfit > 0 ? (sim.instantProfit / totalCrafts) : 0;
+      const effProfitOffer = sim.sellOfferProfit > 0 ? (sim.sellOfferProfit / totalCrafts) : 0;
+      const estSeconds = totalCrafts * 2.5;
+      const estTimeStr = (estSeconds >= 3600) 
+        ? (estSeconds / 3600).toFixed(1) + ' hrs' 
+        : (estSeconds >= 60 ? Math.round(estSeconds / 60) + ' mins' : Math.round(estSeconds) + ' secs');
+      const estHourlyCoins = totalCrafts > 0 && (sim.instantProfit > 0 || sim.sellOfferProfit > 0)
+        ? Math.round(((sim.instantProfit > 0 ? sim.instantProfit : sim.sellOfferProfit) / estSeconds) * 3600) 
+        : 0;
+
       bodyContainer.innerHTML = `
         <!-- 5 Summary Stat Cards (Cost per Shard matches row COST TO FUSE identically) -->
         <div class="summary-grid">
@@ -2554,7 +2667,13 @@
           <div class="stat-card">
             <div class="stat-card-title">Total Fusions</div>
             <div class="stat-card-val">${plan.totalCrafts.toLocaleString()}x</div>
-            <div class="stat-card-sub">in-game /fusionbox crafts</div>
+            <div class="stat-card-sub" style="color:${effProfitInstant > 0 ? 'var(--accent-emerald-soft)' : (effProfitOffer > 0 ? 'var(--accent-cyan)' : 'var(--text-dim)')}; font-weight:700;">
+              ${effProfitInstant > 0 
+                ? `⚡ +${formatCoinMillions(effProfitInstant)} / fusion` 
+                : (effProfitOffer > 0 
+                  ? `⚡ +${formatCoinMillions(effProfitOffer)} / fusion (offer)` 
+                  : 'in-game crafts')}
+            </div>
           </div>
 
           <!-- Card 5: Order Book Supply & Demand Check -->
@@ -2576,6 +2695,48 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- Mini Time & Click Efficiency Calculator Panel -->
+        <div class="efficiency-calc-panel">
+          <div class="efficiency-calc-title">
+            <span>⏱️ Time & Fusion Efficiency Calculator</span>
+            <span class="pill-badge" style="color:var(--accent-cyan); border-color:rgba(56,189,248,0.3); font-size:10px;">
+              ${safeQty}x Shards = ${plan.totalCrafts.toLocaleString()} crafts (~${estTimeStr})
+            </span>
+          </div>
+          <div class="efficiency-calc-grid">
+            <div class="eff-col">
+              <span class="eff-col-label">Instant Profit / Fusion:</span>
+              <span class="eff-col-val" style="color:${effProfitInstant > 0 ? 'var(--accent-emerald)' : 'var(--accent-red)'};">
+                ${effProfitInstant > 0 ? '+' : ''}${formatCoinMillions(effProfitInstant)} <span class="eff-unit">/ craft</span>
+              </span>
+            </div>
+            <div class="eff-col">
+              <span class="eff-col-label">Sell-Offer Profit / Fusion:</span>
+              <span class="eff-col-val" style="color:var(--accent-cyan);">
+                ${effProfitOffer > 0 ? '+' : ''}${formatCoinMillions(effProfitOffer)} <span class="eff-unit">/ craft</span>
+              </span>
+            </div>
+            <div class="eff-col">
+              <span class="eff-col-label">Est. Crafting Duration:</span>
+              <span class="eff-col-val" style="color:#f8fafc;">
+                ~${estTimeStr} <span class="eff-unit">(at ~2.5s / craft)</span>
+              </span>
+            </div>
+            <div class="eff-col">
+              <span class="eff-col-label">Crafting Hourly Rate:</span>
+              <span class="eff-col-val" style="color:#fbbf24;">
+                ~${estHourlyCoins > 0 ? '+' : ''}${formatCoinMillions(estHourlyCoins)} <span class="eff-unit">/ hour</span>
+              </span>
+            </div>
+            <div class="eff-col">
+              <span class="eff-col-label">Recursion Depth:</span>
+              <span class="eff-col-val" style="color:#cbd5e1;">
+                ${resItem.bestLevel} tier${resItem.bestLevel > 1 ? 's' : ''} deep <span class="eff-unit">(${resItem.craftsNeeded1 || 1} craft${(resItem.craftsNeeded1 || 1) > 1 ? 's' : ''} / shard)</span>
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- Materials Needed Panel -->
