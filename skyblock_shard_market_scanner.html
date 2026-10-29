@@ -2643,7 +2643,9 @@
           <div class="stat-card">
             <div class="stat-card-title">Cost per Shard</div>
             <div class="stat-card-val" style="color:var(--accent-cyan);">${resItem.costToFuse.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div class="stat-card-sub">expected avg / shard</div>
+            <div class="stat-card-sub" title="Raw materials cost per in-game craft: ${formatCoinMillions(sim.totalBatchCost / totalCrafts)} (producing ${((safeQty / totalCrafts)).toFixed(2).replace(/\.00$/, '')} shards/craft with Croc yield bonus)">
+              ${(safeQty / totalCrafts) > 1.001 ? `(${formatCoinMillions(sim.totalBatchCost / totalCrafts)} / craft · ${((safeQty / totalCrafts)).toFixed(2).replace(/\.00$/, '')}x Croc)` : 'expected avg / shard'}
+            </div>
           </div>
 
           <div class="stat-card">
