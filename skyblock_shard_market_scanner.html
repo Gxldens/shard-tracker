@@ -125,15 +125,30 @@
     }
 
     .action-row {
-      display: grid;
-      grid-template-columns: auto 1fr 1fr auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      align-items: end;
+      align-items: flex-end;
+    }
+
+    .action-row .field-group {
+      flex: 1 1 180px;
+      min-width: 160px;
+    }
+
+    .action-row #btnFetch,
+    .action-row #btnExport {
+      flex-shrink: 0;
     }
 
     @media (max-width: 820px) {
-      .action-row {
-        grid-template-columns: 1fr 1fr;
+      .action-row .field-group {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+      .action-row #btnFetch,
+      .action-row #btnExport {
+        width: 100%;
       }
     }
 
@@ -1280,11 +1295,22 @@
         </div>
 
         <div class="field-group">
+          <label class="field-label" for="profitFilterSelect">Profit Filter</label>
+          <select id="profitFilterSelect" class="select-input" onchange="onFilterChange()">
+            <option value="all">Show All Shards</option>
+            <option value="sellOrder">💰 Sell-Order Profitable Only</option>
+            <option value="instant">⚡ Instant-Sell Profitable Only</option>
+            <option value="both">💎 Both Sell-Order &amp; Instant</option>
+          </select>
+        </div>
+
+        <div class="field-group">
           <label class="field-label" for="rankSelect">Rank by</label>
           <select id="rankSelect" class="select-input" onchange="onRankChange()">
-            <option value="fusionProfit">Highest fusion profit (most → least)</option>
-            <option value="instantProfit">Highest instant-sell profit (most → least)</option>
+            <option value="sellOrderProfit" selected>💰 Highest Sell-Order profit (if sell order is put up)</option>
+            <option value="instantProfit">⚡ Highest Instant-Sell profit (instant cash-out to buy orders)</option>
             <option value="profitPerFusion">⚡ Highest profit / fusion (most time-efficient)</option>
+            <option value="profitPerFusionOffer">📦 Highest Sell-Order profit / fusion</option>
             <option value="costToFuse">Lowest cost to fuse (least → most)</option>
             <option value="roi">Highest ROI % (profit / cost)</option>
             <option value="vol7d">Highest 7d bought volume (most → least)</option>
@@ -1304,10 +1330,10 @@
         <div class="toggle-card">
           <label class="toggle-header">
             <input type="checkbox" id="checkHighlightInstant" checked onchange="onSettingChange()">
-            <span class="toggle-title">Highlight instant-sell profits above 15k</span>
+            <span class="toggle-title">Highlight instant-sell profit badges</span>
           </label>
           <p class="toggle-helper">
-            When on, show the extra instant-sell profit and rank qualifying shards first (highest instant profit first). When off, use only the chosen sort.
+            When on, visually highlights instant-sell opportunities with green badges and instant cash-out rates in the table. Uses your configured threshold (default 1 coin).
           </p>
         </div>
 
@@ -1345,7 +1371,7 @@
         <div class="status-summary" id="statusSummary">
           <span class="status-highlight" id="statusShards">Loaded 322 shard markets</span> · 
           <span id="statusRecipes">131,512 recipe options</span> · 
-          <span id="statusLevels">up to 4 fusion levels</span> · 
+          <span id="statusLevels">up to 3 fusion levels</span> · 
           <span id="statusFee">0 coins/craft.</span>
         </div>
 
@@ -1472,7 +1498,7 @@
         <div class="panel-option">
           <div class="panel-option-title">Instant-Sell Highlight Threshold</div>
           <div class="fee-input-wrap">
-            <input type="number" id="instantThresholdInput" class="fee-input" value="15000" step="1000" oninput="onSettingChange()" style="width:100px;">
+            <input type="number" id="instantThresholdInput" class="fee-input" value="1" step="1" oninput="onSettingChange()" style="width:100px;">
             <span class="fee-unit">coins</span>
           </div>
         </div>
@@ -1483,8 +1509,8 @@
           <select id="depthSelect" class="select-input" onchange="onSettingChange()">
             <option value="1">1 Fusion Level (Direct Ingredients)</option>
             <option value="2">2 Fusion Levels</option>
-            <option value="3">3 Fusion Levels</option>
-            <option value="4" selected>4 Fusion Levels (Full Recursive)</option>
+            <option value="3" selected>3 Fusion Levels</option>
+            <option value="4">4 Fusion Levels (Full Recursive)</option>
           </select>
         </div>
 
@@ -1794,8 +1820,9 @@
       const multiplierMode = document.getElementById('multiplierModeSelect').value;
       const ingredientMode = document.getElementById('ingredientModeSelect').value;
       const taxRate = parseFloat(document.getElementById('taxSelect').value) || 0;
-      const instantThreshold = parseFloat(document.getElementById('instantThresholdInput').value) || 15000;
-      const maxLevels = parseInt(document.getElementById('depthSelect').value, 10) || 4;
+      const rawThreshold = parseFloat(document.getElementById('instantThresholdInput').value);
+      const instantThreshold = !isNaN(rawThreshold) ? rawThreshold : 1;
+      const maxLevels = parseInt(document.getElementById('depthSelect').value, 10) || 3;
       const purseBudget = parseFloat(document.getElementById('purseLimitInput').value) || 0;
 
       document.getElementById('statusFee').textContent = fusionCostPerCraft.toLocaleString() + ' coins/craft.';
@@ -2325,6 +2352,8 @@
       const tbody = document.getElementById('tableBody');
       const emptyMsg = document.getElementById('emptyMessage');
       const filterText = document.getElementById('filterInput').value.trim().toLowerCase();
+      const profitFilterEl = document.getElementById('profitFilterSelect');
+      const profitFilter = profitFilterEl ? profitFilterEl.value : 'all';
       const rankBy = document.getElementById('rankSelect').value;
       const highlightInstant = document.getElementById('checkHighlightInstant').checked;
 
@@ -2338,6 +2367,14 @@
         );
       }
 
+      if (profitFilter === 'sellOrder') {
+        items = items.filter(it => it.fusionProfit > 0 && it.costToFuse !== Infinity);
+      } else if (profitFilter === 'instant') {
+        items = items.filter(it => it.instantProfit > 0 && it.costToFuse !== Infinity);
+      } else if (profitFilter === 'both') {
+        items = items.filter(it => it.fusionProfit > 0 && it.instantProfit > 0 && it.costToFuse !== Infinity);
+      }
+
       if (items.length === 0) {
         tbody.innerHTML = '';
         emptyMsg.style.display = 'block';
@@ -2346,41 +2383,44 @@
       emptyMsg.style.display = 'none';
 
       function baseCompare(a, b) {
+        let diff = 0;
         switch (rankBy) {
+          case 'sellOrderProfit':
           case 'fusionProfit':
-            return b.fusionProfit - a.fusionProfit;
+            diff = b.fusionProfit - a.fusionProfit;
+            break;
           case 'instantProfit':
-            return b.instantProfit - a.instantProfit;
+            diff = b.instantProfit - a.instantProfit;
+            break;
           case 'profitPerFusion':
-            return b.bestProfitPerFusion - a.bestProfitPerFusion;
+            diff = b.bestProfitPerFusion - a.bestProfitPerFusion;
+            break;
+          case 'profitPerFusionOffer':
+            diff = b.profitPerFusionOffer - a.profitPerFusionOffer;
+            break;
           case 'costToFuse':
-            return a.costToFuse - b.costToFuse;
+            diff = a.costToFuse - b.costToFuse;
+            break;
           case 'roi':
-            return b.roi - a.roi;
+            diff = b.roi - a.roi;
+            break;
           case 'vol7d':
-            return b.vol7d - a.vol7d;
+            diff = b.vol7d - a.vol7d;
+            break;
           case 'velocity':
-            return b.velocityProfit - a.velocityProfit;
+            diff = b.velocityProfit - a.velocityProfit;
+            break;
           default:
-            return b.fusionProfit - a.fusionProfit;
+            diff = b.fusionProfit - a.fusionProfit;
+            break;
         }
+        if (diff !== 0 && !isNaN(diff)) return diff;
+        if (a.costToFuse !== Infinity && b.costToFuse === Infinity) return -1;
+        if (a.costToFuse === Infinity && b.costToFuse !== Infinity) return 1;
+        return a.name.localeCompare(b.name);
       }
 
-      if (highlightInstant) {
-        items.sort((a, b) => {
-          if (a.isInstantProfitable && !b.isInstantProfitable) return -1;
-          if (!a.isInstantProfitable && b.isInstantProfitable) return 1;
-          if (a.isInstantProfitable && b.isInstantProfitable) {
-            if (rankBy === 'profitPerFusion') {
-              return b.profitPerFusionInstant - a.profitPerFusionInstant;
-            }
-            return b.instantProfit - a.instantProfit;
-          }
-          return baseCompare(a, b);
-        });
-      } else {
-        items.sort(baseCompare);
-      }
+      items.sort(baseCompare);
 
       let html = '';
       for (let rank = 1; rank <= items.length; rank++) {
@@ -2433,7 +2473,7 @@
                   <a href="https://skyblock.bz/product/${item.internal_id}" target="_blank" rel="noopener" class="shard-link" title="Open on skyblock.bz">↗</a>
                 </div>
                 <div class="shard-id-code">${item.internal_id}</div>
-                ${item.isInstantProfitable ? '<div class="pill-instant-profit">INSTANT-SELL PROFIT</div>' : ''}
+                ${(item.isInstantProfitable && highlightInstant) ? '<div class="pill-instant-profit">INSTANT-SELL PROFIT</div>' : ''}
               </div>
             </td>
 
@@ -2468,7 +2508,7 @@
             <td class="col-tint-5">
               <div class="profit-val ${item.fusionProfit < 0 ? 'negative' : ''}">${fusionProfitStr}</div>
               <div class="cell-sublabel" style="color:var(--accent-emerald-soft);">coins per shard</div>
-              ${instantSellStr ? `<div class="instant-profit-sub">Instant sell: ${instantSellStr}</div>` : ''}
+              ${(instantSellStr && highlightInstant) ? `<div class="instant-profit-sub">Instant sell: ${instantSellStr}</div>` : ''}
               ${item.bestProfitPerFusion > 0 ? `
                 <div class="fusion-rate-sub" title="Profit divided by number of fusions needed. Producing 1 shard requires ${item.craftsNeeded1} in-game craft(s).">
                   ⚡ +${formatCoinMillions(item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : item.profitPerFusionOffer)} / fusion <span style="color:var(--text-dim); font-size:9.5px;">(${item.craftsNeeded1}x)</span>
