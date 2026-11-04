@@ -743,6 +743,104 @@
       transform: translateY(-1px);
     }
 
+    /* Route Efficiency Debug Mode Styles */
+    .pill-debug-discarded {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #fb923c;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.35);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-top: 3px;
+      white-space: nowrap;
+      cursor: help;
+    }
+
+    .debug-cost-sub {
+      font-size: 10px;
+      color: #f97316;
+      font-weight: 600;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    .debug-profit-sub {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    .debug-inspector-table-wrap {
+      overflow-x: auto;
+      margin-top: 8px;
+      border: 1px solid rgba(51, 65, 85, 0.7);
+      border-radius: 6px;
+    }
+
+    .debug-inspector-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .debug-inspector-table th {
+      background: rgba(15, 23, 42, 0.9);
+      color: #94a3b8;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .debug-inspector-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+      white-space: nowrap;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .debug-inspector-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .debug-inspector-table tr.row-selected {
+      background: rgba(14, 116, 144, 0.18);
+    }
+
+    .debug-inspector-table tr.row-discarded {
+      background: rgba(239, 68, 68, 0.08);
+      color: #cbd5e1;
+    }
+
+    .verdict-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+      font-family: var(--font-sans);
+    }
+
+    .verdict-winner {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .verdict-discarded {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+
     /* Fusion Depth Comparison Panel */
     .depth-compare-panel {
       background: rgba(15, 23, 42, 0.75);
@@ -1405,6 +1503,7 @@
             <option value="sellOrder">💰 Sell-Order Profitable Only</option>
             <option value="instant">⚡ Instant-Sell Profitable Only</option>
             <option value="both">💎 Both Sell-Order &amp; Instant</option>
+            <option value="discarded">🔬 Step-Optimized Only (Discarded Bloat)</option>
           </select>
         </div>
 
@@ -1480,6 +1579,9 @@
           <!-- 1-Click Tax Toggle Pill (Fix 3) -->
           <button id="taxTogglePill" class="pill-btn" onclick="toggleTaxRatePill()" title="Click to toggle Bazaar Tax between 1.25% (Standard) and 0% (Raw Reference Scanner Mode)">
             Tax: 1.25% (Standard) ▾
+          </button>
+          <button id="debugTogglePill" class="pill-btn" onclick="toggleDebugMode()" title="Toggle Route Efficiency Debug Mode: reveals discarded higher-step routes, rejected fusion bloat, and step comparison trade-offs">
+            🔬 Debug: OFF
           </button>
           <button class="btn-more-options" onclick="toggleGuide()">
             <span id="guideToggleText">📖 4-Step Flip Guide ▾</span>
@@ -1603,6 +1705,18 @@
           </div>
         </div>
 
+        <!-- Route Efficiency Debug Inspector Option -->
+        <div class="panel-option">
+          <div class="panel-option-title">Route Efficiency Debug Mode</div>
+          <label style="font-size:12px; color:#cbd5e1; display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="checkDebugMode" onchange="toggleDebugMode()">
+            <span>Show discarded routes, fusion bloat warnings &amp; step trade-off comparisons</span>
+          </label>
+          <span style="font-size:10.5px; color:var(--text-dim); margin-top:4px;">
+            Reveals which deeper routes were discarded by the Smart Optimal solver due to adding excessive crafts for negligible coin gains.
+          </span>
+        </div>
+
         <!-- Max Fusion Search Depth -->
         <div class="panel-option">
           <div class="panel-option-title">Max Fusion Search Depth</div>
@@ -1719,6 +1833,33 @@
     let solverResults = null;
     let expandedDrawerShardIdx = null;
     let drawerSelectedLevel = new Map();
+    let isDebugMode = false;
+
+    function toggleDebugMode() {
+      isDebugMode = !isDebugMode;
+      updateDebugUI();
+      renderTable();
+      if (expandedDrawerShardIdx !== null) {
+        renderDrawer(expandedDrawerShardIdx);
+      }
+      showToast(isDebugMode 
+        ? '🔬 Debug Mode ON: Showing discarded routes & fusion bloat trade-offs' 
+        : '🔬 Debug Mode OFF: Showing standard scanner view');
+    }
+
+    function updateDebugUI() {
+      const pill = document.getElementById('debugTogglePill');
+      if (pill) {
+        pill.innerHTML = isDebugMode ? '🔬 Debug: ON' : '🔬 Debug: OFF';
+        pill.style.borderColor = isDebugMode ? '#38bdf8' : 'var(--border-accent)';
+        pill.style.color = isDebugMode ? '#38bdf8' : 'var(--text-muted)';
+        pill.style.background = isDebugMode ? 'rgba(14, 116, 144, 0.25)' : 'var(--bg-card-sub)';
+      }
+      const check = document.getElementById('checkDebugMode');
+      if (check && check.checked !== isDebugMode) {
+        check.checked = isDebugMode;
+      }
+    }
 
     function setDrawerDepthStep(shardIdx, level) {
       drawerSelectedLevel.set(shardIdx, level);
@@ -2137,6 +2278,79 @@
         }
 
         const chosenDL = depthLevels.find(dl => dl.level === bestLevel) || depthLevels[0] || null;
+        const crafts1 = chosenDL ? chosenDL.crafts1 : 1;
+
+        // Populate debug engine decision verdicts for every level
+        const MIN_MARGINAL_COINS_PER_CRAFT = 25000;
+        for (let k = 0; k < depthLevels.length; k++) {
+          const dl = depthLevels[k];
+          if (dl.level === bestLevel) {
+            dl.verdict = 'winner';
+            dl.verdictText = '⭐ Selected (Smart)';
+            dl.verdictDesc = 'Optimal route: best efficiency and execution safety';
+            dl.extraCrafts = 0;
+            dl.extraProfit = 0;
+            dl.marginalRate = 0;
+          } else if (dl.level < bestLevel) {
+            const profitDeficit = minCostToFuse - dl.cost;
+            dl.verdict = 'inferior';
+            dl.verdictText = '⛔ Lower Profit';
+            dl.verdictDesc = 'Step ' + bestLevel + ' yields +' + formatCoinMillions(profitDeficit * -1) + ' more profit with good efficiency';
+            dl.extraCrafts = dl.crafts1 - crafts1;
+            dl.extraProfit = profitDeficit;
+            dl.marginalRate = 0;
+          } else {
+            // dl.level > bestLevel
+            const extraProfit = minCostToFuse - dl.cost;
+            const extraCrafts = dl.crafts1 - crafts1;
+            const rate = extraCrafts > 0 ? (extraProfit / extraCrafts) : 0;
+            dl.extraCrafts = extraCrafts;
+            dl.extraProfit = extraProfit;
+            dl.marginalRate = rate;
+
+            if (extraCrafts <= 0) {
+              dl.verdict = 'discarded';
+              dl.verdictText = '⛔ Discarded';
+              dl.verdictDesc = 'Same crafts as Step ' + bestLevel + ' with no gain';
+            } else if (extraProfit <= 0) {
+              dl.verdict = 'discarded';
+              dl.verdictText = '⛔ Higher Cost';
+              dl.verdictDesc = 'Costs +' + formatCoinMillions(extraProfit * -1) + ' more despite +' + extraCrafts + ' extra crafts';
+            } else if (rate < MIN_MARGINAL_COINS_PER_CRAFT) {
+              dl.verdict = 'discarded';
+              dl.verdictText = '⛔ Pruned (Bloat)';
+              dl.verdictDesc = '+' + extraCrafts + ' crafts for only +' + formatCoinMillions(extraProfit) + ' coins (+' + formatCoinMillions(rate) + '/craft < 25k)';
+            } else {
+              dl.verdict = 'discarded';
+              dl.verdictText = '⛔ Discarded';
+              dl.verdictDesc = 'Sub-optimal profit-to-craft ratio';
+            }
+          }
+        }
+
+        const bloatDiscarded = depthLevels.filter(dl => dl.level > bestLevel && dl.crafts1 > crafts1);
+        const hasDiscardedBloat = (bloatDiscarded.length > 0);
+        let primaryDiscarded = null;
+        if (hasDiscardedBloat) {
+          let maxExtra = -1;
+          for (const bd of bloatDiscarded) {
+            const extra = bd.crafts1 - crafts1;
+            if (extra > maxExtra) {
+              maxExtra = extra;
+              const coinGain = minCostToFuse - bd.cost;
+              const rate = extra > 0 ? (coinGain / extra) : 0;
+              primaryDiscarded = {
+                level: bd.level,
+                crafts: bd.crafts1,
+                extraCrafts: extra,
+                cost: bd.cost,
+                coinGain: coinGain,
+                marginalRate: rate
+              };
+            }
+          }
+        }
+
         const fusionProfit = chosenDL ? chosenDL.fusionProfit : -Infinity;
         const instantProfit = chosenDL ? chosenDL.instantProfit : -Infinity;
 
@@ -2162,7 +2376,6 @@
           ? (fusionProfit / minCostToFuse * 100)
           : -Infinity;
 
-        const crafts1 = chosenDL ? chosenDL.crafts1 : 1;
         const pPerFusionInstant = chosenDL ? chosenDL.profitPerFusionInstant : -Infinity;
         const pPerFusionOffer = chosenDL ? chosenDL.profitPerFusionOffer : -Infinity;
 
@@ -2192,7 +2405,10 @@
             pPerFusionInstant > 0 ? pPerFusionInstant : 0,
             pPerFusionOffer > 0 ? pPerFusionOffer : 0
           ),
-          depthLevels
+          depthLevels,
+          hasDiscardedBloat,
+          primaryDiscarded,
+          bloatDiscarded
         };
       }
 
@@ -2527,6 +2743,8 @@
         items = items.filter(it => it.instantProfit > 0 && it.costToFuse !== Infinity);
       } else if (profitFilter === 'both') {
         items = items.filter(it => it.fusionProfit > 0 && it.instantProfit > 0 && it.costToFuse !== Infinity);
+      } else if (profitFilter === 'discarded') {
+        items = items.filter(it => it.hasDiscardedBloat);
       }
 
       if (items.length === 0) {
@@ -2628,6 +2846,11 @@
                 </div>
                 <div class="shard-id-code">${item.internal_id}</div>
                 ${(item.isInstantProfitable && highlightInstant) ? '<div class="pill-instant-profit">INSTANT-SELL PROFIT</div>' : ''}
+                ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
+                  <div class="pill-debug-discarded" title="Smart Solver pruned Step ${item.primaryDiscarded.level} (+${item.primaryDiscarded.extraCrafts} crafts for only +${formatCoinMillions(item.primaryDiscarded.coinGain)}, rate: +${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)">
+                    🔬 Pruned Step ${item.primaryDiscarded.level}: +${item.primaryDiscarded.extraCrafts} crafts avoided
+                  </div>
+                ` : ''}
               </div>
             </td>
 
@@ -2648,6 +2871,11 @@
                 <div class="col4-val-group">
                   <div class="fuse-cost-val">${costToFuseStr}</div>
                   <div class="cell-sublabel">coins per shard</div>
+                  ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
+                    <div class="debug-cost-sub" title="Step ${item.primaryDiscarded.level} cost: ${formatCoinMillions(item.primaryDiscarded.cost)} (${item.primaryDiscarded.crafts}x crafts)">
+                      Step ${item.bestLevel} active · Step ${item.primaryDiscarded.level} pruned
+                    </div>
+                  ` : ''}
                 </div>
               </div>
               ${item.costToFuse !== Infinity ? `
@@ -2663,6 +2891,11 @@
               <div class="profit-val ${item.fusionProfit < 0 ? 'negative' : ''}">${fusionProfitStr}</div>
               <div class="cell-sublabel" style="color:var(--accent-emerald-soft);">coins per shard</div>
               ${(instantSellStr && highlightInstant) ? `<div class="instant-profit-sub">Instant sell: ${instantSellStr}</div>` : ''}
+              ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
+                <div class="debug-profit-sub" title="Step ${item.primaryDiscarded.level} offered only +${formatCoinMillions(item.primaryDiscarded.coinGain)} for +${item.primaryDiscarded.extraCrafts} crafts">
+                  Avoided +${item.primaryDiscarded.extraCrafts} crafts (+${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)
+                </div>
+              ` : ''}
               ${item.bestProfitPerFusion > 0 ? `
                 <div class="fusion-rate-sub" title="Profit divided by number of fusions needed. Producing 1 shard requires ${item.craftsNeeded1} in-game craft(s).">
                   ⚡ +${formatCoinMillions(item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : item.profitPerFusionOffer)} / fusion <span style="color:var(--text-dim); font-size:9.5px;">(${item.craftsNeeded1}x)</span>
@@ -2983,6 +3216,67 @@
                     return `Step ${recommended.level} delivers the highest profit while maintaining excellent fusion click efficiency.`;
                   }
                 })()}
+              </div>
+            ` : ''}
+
+            ${isDebugMode ? `
+              <div style="margin-top:10px;">
+                <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                  <span>🔬 Route Decision Engine Inspector</span>
+                  <span class="pill-badge" style="font-size:9.5px; color:#f97316; border-color:rgba(249,115,22,0.4);">
+                    Threshold: 25k coins/extra craft
+                  </span>
+                </div>
+                <div class="debug-inspector-table-wrap">
+                  <table class="debug-inspector-table">
+                    <thead>
+                      <tr>
+                        <th>Step</th>
+                        <th>Status</th>
+                        <th>Crafts</th>
+                        <th>Cost/Shard</th>
+                        <th>Offer Profit</th>
+                        <th>Rate/Fusion</th>
+                        <th>Marginal Gain</th>
+                        <th>Engine Verdict</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${resItem.depthLevels.map(dl => {
+                        const isWinner = (dl.level === resItem.bestLevel);
+                        const isBloat = (dl.level > resItem.bestLevel && dl.crafts1 > (resItem.craftsNeeded1 || 1));
+                        return `
+                          <tr class="${isWinner ? 'row-selected' : (isBloat ? 'row-discarded' : '')}">
+                            <td style="font-weight:700; color:#f8fafc;">Step ${dl.level}</td>
+                            <td>
+                              <span class="verdict-badge ${isWinner ? 'verdict-winner' : (isBloat ? 'verdict-discarded' : '')}">
+                                ${dl.verdictText}
+                              </span>
+                            </td>
+                            <td>${dl.crafts1}x</td>
+                            <td>${formatCoinMillions(dl.cost)}</td>
+                            <td style="color:${dl.fusionProfit > 0 ? 'var(--accent-emerald)' : 'var(--accent-red)'};">
+                              ${dl.fusionProfit > 0 ? '+' : ''}${formatCoinMillions(dl.fusionProfit)}
+                            </td>
+                            <td style="color:#38bdf8;">
+                              ${dl.profitPerFusionOffer > 0 ? '+' : ''}${formatCoinMillions(dl.profitPerFusionOffer)}
+                            </td>
+                            <td style="color:${dl.marginalRate >= 25000 ? 'var(--accent-emerald)' : (dl.marginalRate > 0 ? '#f97316' : 'var(--text-dim)')};">
+                              ${dl.level === resItem.bestLevel 
+                                ? '<span style="color:#94a3b8;">— Baseline</span>' 
+                                : (dl.extraCrafts > 0 
+                                  ? (dl.extraProfit > 0 ? '+' + formatCoinMillions(dl.marginalRate) + '/craft' : 'No gain') 
+                                  : 'Same crafts')}
+                            </td>
+                            <td style="font-family:var(--font-sans); font-size:10.5px; color:#cbd5e1;">
+                              ${dl.verdictDesc}
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ` : ''}
           </div>
