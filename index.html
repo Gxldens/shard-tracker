@@ -743,6 +743,110 @@
       transform: translateY(-1px);
     }
 
+    /* Fusion Depth Comparison Panel */
+    .depth-compare-panel {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+
+    .depth-compare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .depth-compare-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .depth-compare-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .depth-step-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .depth-step-btn {
+      background: rgba(10, 15, 26, 0.6);
+      border: 1px solid rgba(30, 41, 59, 0.8);
+      border-radius: 6px;
+      padding: 8px 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .depth-step-btn:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .depth-step-btn.active {
+      border-color: #38bdf8;
+      background: rgba(14, 116, 144, 0.25);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+    }
+
+    .depth-step-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .depth-step-num {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .pill-smart {
+      font-size: 9px;
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(14, 116, 144, 0.2);
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+
+    .depth-step-stat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .depth-step-eff {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .depth-compare-insight {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(51, 65, 85, 0.6);
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
     /* Fusion Efficiency & Profit Per Fusion Calculator */
     .fusion-rate-sub {
       font-size: 10px;
@@ -1311,10 +1415,6 @@
             <option value="instantProfit">⚡ Highest Instant-Sell profit (instant cash-out to buy orders)</option>
             <option value="profitPerFusion">⚡ Highest profit / fusion (most time-efficient)</option>
             <option value="profitPerFusionOffer">📦 Highest Sell-Order profit / fusion</option>
-            <option value="costToFuse">Lowest cost to fuse (least → most)</option>
-            <option value="roi">Highest ROI % (profit / cost)</option>
-            <option value="vol7d">Highest 7d bought volume (most → least)</option>
-            <option value="velocity">Highest velocity profit / hour</option>
           </select>
         </div>
 
@@ -1371,7 +1471,7 @@
         <div class="status-summary" id="statusSummary">
           <span class="status-highlight" id="statusShards">Loaded 322 shard markets</span> · 
           <span id="statusRecipes">131,512 recipe options</span> · 
-          <span id="statusLevels">up to 3 fusion levels</span> · 
+          <span id="statusLevels">Smart Optimal depth</span> · 
           <span id="statusFee">0 coins/craft.</span>
         </div>
 
@@ -1507,11 +1607,15 @@
         <div class="panel-option">
           <div class="panel-option-title">Max Fusion Search Depth</div>
           <select id="depthSelect" class="select-input" onchange="onSettingChange()">
+            <option value="smart" selected>⭐ Smart Optimal (Auto-picks highest profit &amp; click efficiency)</option>
             <option value="1">1 Fusion Level (Direct Ingredients)</option>
             <option value="2">2 Fusion Levels</option>
-            <option value="3" selected>3 Fusion Levels</option>
+            <option value="3">3 Fusion Levels</option>
             <option value="4">4 Fusion Levels (Full Recursive)</option>
           </select>
+          <span style="font-size:10.5px; color:var(--text-dim); margin-top:2px;">
+            Smart Optimal evaluates all 4 depths and picks the sweet spot—preventing routes that add 200+ crafts for negligible profit gains.
+          </span>
         </div>
 
         <!-- Ingredient Acquisition Mode -->
@@ -1614,6 +1718,14 @@
     // Solver Solution
     let solverResults = null;
     let expandedDrawerShardIdx = null;
+    let drawerSelectedLevel = new Map();
+
+    function setDrawerDepthStep(shardIdx, level) {
+      drawerSelectedLevel.set(shardIdx, level);
+      const input = document.getElementById('batchQtyInput-' + shardIdx);
+      const batchQty = input ? (parseInt(input.value, 10) || 1) : 1;
+      renderDrawerBody(shardIdx, batchQty);
+    }
 
     function isReptileShard(s) {
       if (!s) return false;
@@ -1822,11 +1934,15 @@
       const taxRate = parseFloat(document.getElementById('taxSelect').value) || 0;
       const rawThreshold = parseFloat(document.getElementById('instantThresholdInput').value);
       const instantThreshold = !isNaN(rawThreshold) ? rawThreshold : 1;
-      const maxLevels = parseInt(document.getElementById('depthSelect').value, 10) || 3;
+      const depthMode = document.getElementById('depthSelect').value;
+      const isSmartDepth = (depthMode === 'smart');
+      const maxLevels = isSmartDepth ? 4 : (parseInt(depthMode, 10) || 3);
       const purseBudget = parseFloat(document.getElementById('purseLimitInput').value) || 0;
 
       document.getElementById('statusFee').textContent = fusionCostPerCraft.toLocaleString() + ' coins/craft.';
-      document.getElementById('statusLevels').textContent = 'up to ' + maxLevels + ' fusion levels';
+      document.getElementById('statusLevels').textContent = isSmartDepth 
+        ? 'Smart Optimal depth (click-efficient)' 
+        : 'up to ' + maxLevels + ' fusion levels';
 
       const chamIdx = internalIdToIdx.get('SHARD_CHAMELEON');
 
@@ -1938,33 +2054,92 @@
         }
       }
 
-      // Final shard metrics
+      // Pre-initialize solverResults so buildCraftingPlan can evaluate levels
       const results = new Array(numShards);
+      const solverObj = {
+        results,
+        bestRecipe,
+        recipeCost,
+        bestCost,
+        taxRate,
+        crocLevel,
+        crocMultiplier,
+        maxLevels,
+        purseBudget,
+        buySummaryAvailable
+      };
+      solverResults = solverObj;
 
       for (let i = 0; i < numShards; i++) {
         const s = shardList[i];
-        let minCostToFuse = Infinity;
-        let bestLevel = -1;
-
-        for (let d = 1; d <= maxLevels; d++) {
-          if (recipeCost[d][i] < minCostToFuse) {
-            minCostToFuse = recipeCost[d][i];
-            bestLevel = d;
-          }
-        }
-
         const sellOffer = sellOrderPrices[i];
         const buyBid = buyOrderPrices[i];
 
-        const fusionProfit = (sellOffer !== Infinity && minCostToFuse !== Infinity)
-          ? (sellOffer * (1 - taxRate) - minCostToFuse)
-          : -Infinity;
+        // Evaluate all available depths for this shard
+        const depthLevels = [];
+        for (let d = 1; d <= maxLevels; d++) {
+          if (recipeCost[d][i] !== Infinity) {
+            const p1 = buildCraftingPlan(i, 1, crocMultiplier, d);
+            const c1 = Math.max(1, p1.totalCrafts || 1);
+            const cost = recipeCost[d][i];
+            const pOffer = (sellOffer !== Infinity) ? (sellOffer * (1 - taxRate) - cost) : -Infinity;
+            const pInstant = (buyBid > 0) ? (buyBid * (1 - taxRate) - cost) : -Infinity;
+            depthLevels.push({
+              level: d,
+              cost,
+              crafts1: c1,
+              fusionProfit: pOffer,
+              instantProfit: pInstant,
+              profitPerFusionInstant: (pInstant > 0) ? (pInstant / c1) : -Infinity,
+              profitPerFusionOffer: (pOffer > 0) ? (pOffer / c1) : -Infinity
+            });
+          }
+        }
 
-        const instantProfit = (buyBid > 0 && minCostToFuse !== Infinity)
-          ? (buyBid * (1 - taxRate) - minCostToFuse)
-          : -Infinity;
+        let minCostToFuse = Infinity;
+        let bestLevel = -1;
 
-        // Fix 3: Profitable Buy Depth strictly uses exact same taxRate and threshold
+        if (depthLevels.length > 0) {
+          if (!isSmartDepth) {
+            // Standard: Lowest nominal cost among allowed levels
+            let minC = Infinity;
+            for (let k = 0; k < depthLevels.length; k++) {
+              if (depthLevels[k].cost < minC) {
+                minC = depthLevels[k].cost;
+                bestLevel = depthLevels[k].level;
+                minCostToFuse = minC;
+              }
+            }
+          } else {
+            // Smart Optimal: Auto-picks the best profit and click efficiency balance.
+            // Minimum marginal profit required per additional craft: 25,000 coins.
+            // Prevents adding 200+ crafts for negligible profit gains.
+            const MIN_MARGINAL_COINS_PER_CRAFT = 25000;
+            let chosen = depthLevels[0];
+            for (let k = 1; k < depthLevels.length; k++) {
+              const cand = depthLevels[k];
+              if (cand.cost < chosen.cost) {
+                const extraProfit = chosen.cost - cand.cost;
+                const extraCrafts = cand.crafts1 - chosen.crafts1;
+                if (extraCrafts <= 0) {
+                  chosen = cand;
+                } else {
+                  const marginalRate = extraProfit / extraCrafts;
+                  if (marginalRate >= MIN_MARGINAL_COINS_PER_CRAFT) {
+                    chosen = cand;
+                  }
+                }
+              }
+            }
+            bestLevel = chosen.level;
+            minCostToFuse = chosen.cost;
+          }
+        }
+
+        const chosenDL = depthLevels.find(dl => dl.level === bestLevel) || depthLevels[0] || null;
+        const fusionProfit = chosenDL ? chosenDL.fusionProfit : -Infinity;
+        const instantProfit = chosenDL ? chosenDL.instantProfit : -Infinity;
+
         let profitableBuyDepth = 0;
         let prod = bazaarData[s.internal_id];
         if (!prod && SHARD_ALIASES[s.internal_id]) prod = bazaarData[SHARD_ALIASES[s.internal_id]];
@@ -1987,6 +2162,10 @@
           ? (fusionProfit / minCostToFuse * 100)
           : -Infinity;
 
+        const crafts1 = chosenDL ? chosenDL.crafts1 : 1;
+        const pPerFusionInstant = chosenDL ? chosenDL.profitPerFusionInstant : -Infinity;
+        const pPerFusionOffer = chosenDL ? chosenDL.profitPerFusionOffer : -Infinity;
+
         results[i] = {
           idx: i,
           code: s.code,
@@ -2005,50 +2184,23 @@
           hourlyVelocity,
           velocityProfit,
           roi,
-          isInstantProfitable: (instantProfit >= instantThreshold)
+          isInstantProfitable: (instantProfit >= instantThreshold),
+          craftsNeeded1: crafts1,
+          profitPerFusionInstant: pPerFusionInstant,
+          profitPerFusionOffer: pPerFusionOffer,
+          bestProfitPerFusion: Math.max(
+            pPerFusionInstant > 0 ? pPerFusionInstant : 0,
+            pPerFusionOffer > 0 ? pPerFusionOffer : 0
+          ),
+          depthLevels
         };
-      }
-
-      // Calculate single-shard crafts and profit per fusion efficiency
-      const solverObj = {
-        results,
-        bestRecipe,
-        recipeCost,
-        bestCost,
-        taxRate,
-        crocLevel,
-        crocMultiplier,
-        maxLevels,
-        purseBudget,
-        buySummaryAvailable
-      };
-      solverResults = solverObj;
-
-      for (let i = 0; i < numShards; i++) {
-        const item = results[i];
-        if (item.costToFuse !== Infinity && item.bestLevel > 0) {
-          const p1 = buildCraftingPlan(i, 1, crocMultiplier);
-          const c1 = Math.max(1, p1.totalCrafts || 1);
-          item.craftsNeeded1 = c1;
-          item.profitPerFusionInstant = (item.instantProfit > 0) ? (item.instantProfit / c1) : -Infinity;
-          item.profitPerFusionOffer = (item.fusionProfit > 0) ? (item.fusionProfit / c1) : -Infinity;
-          item.bestProfitPerFusion = Math.max(
-            item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : 0,
-            item.profitPerFusionOffer > 0 ? item.profitPerFusionOffer : 0
-          );
-        } else {
-          item.craftsNeeded1 = 1;
-          item.profitPerFusionInstant = -Infinity;
-          item.profitPerFusionOffer = -Infinity;
-          item.bestProfitPerFusion = 0;
-        }
       }
 
       return solverObj;
     }
 
     // --- RECURSIVE ROUTE & BATCH SLIPPAGE CALCULATOR ---
-    function buildCraftingPlan(targetShardIdx, targetQty, crocMultiplier) {
+    function buildCraftingPlan(targetShardIdx, targetQty, crocMultiplier, overrideLevel = null) {
       const plan = {
         targetShardIdx,
         targetQty,
@@ -2059,7 +2211,9 @@
       if (!solverResults) return plan;
       const { bestRecipe, recipeCost, bestCost } = solverResults;
 
-      let optLevel = solverResults.results[targetShardIdx].bestLevel;
+      let optLevel = (overrideLevel !== null && overrideLevel !== undefined)
+        ? overrideLevel
+        : (solverResults.results[targetShardIdx] ? solverResults.results[targetShardIdx].bestLevel : 1);
       if (optLevel <= 0) return plan;
 
       const isGlobalCroc = (document.getElementById('multiplierModeSelect').value === 'global');
@@ -2659,8 +2813,12 @@
       const taxRate = solverResults.taxRate;
       const purseBudget = solverResults.purseBudget;
 
+      const activeLevel = drawerSelectedLevel.has(shardIdx) 
+        ? drawerSelectedLevel.get(shardIdx) 
+        : resItem.bestLevel;
+
       const safeQty = Math.max(1, parseInt(batchQty, 10) || 1);
-      const plan = buildCraftingPlan(shardIdx, safeQty, crocMultiplier);
+      const plan = buildCraftingPlan(shardIdx, safeQty, crocMultiplier, activeLevel);
       const sim = simulateBatchExecution(plan, taxRate);
 
       const isPurseExceeded = (purseBudget > 0 && sim.purseBuffer > purseBudget);
@@ -2682,7 +2840,7 @@
           
           <div class="stat-card">
             <div class="stat-card-title">Cost per Shard</div>
-            <div class="stat-card-val" style="color:var(--accent-cyan);">${resItem.costToFuse.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div class="stat-card-val" style="color:var(--accent-cyan);">${(resItem.depthLevels && resItem.depthLevels.find(dl => dl.level === activeLevel) ? resItem.depthLevels.find(dl => dl.level === activeLevel).cost : resItem.costToFuse).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div class="stat-card-sub" title="Raw materials cost per in-game craft: ${formatCoinMillions(sim.totalBatchCost / totalCrafts)} (producing ${((safeQty / totalCrafts)).toFixed(2).replace(/\.00$/, '')} shards/craft with Croc yield bonus)">
               ${(safeQty / totalCrafts) > 1.001 ? `(${formatCoinMillions(sim.totalBatchCost / totalCrafts)} / craft · ${((safeQty / totalCrafts)).toFixed(2).replace(/\.00$/, '')}x Croc)` : 'expected avg / shard'}
             </div>
@@ -2780,6 +2938,55 @@
             </div>
           </div>
         </div>
+
+        <!-- Built-in Fusion Step Comparison & Switcher Panel -->
+        ${(resItem.depthLevels && resItem.depthLevels.length > 1) ? `
+          <div class="depth-compare-panel">
+            <div class="depth-compare-header">
+              <span class="depth-compare-title">⚡ Built-in Fusion Step Comparison</span>
+              <span class="depth-compare-sub">Click a step to compare routes &amp; craft counts</span>
+            </div>
+            <div class="depth-step-buttons">
+              ${resItem.depthLevels.map(dl => {
+                const isActive = (dl.level === activeLevel);
+                const isSmart = (dl.level === resItem.bestLevel);
+                const stepCost = dl.cost;
+                const stepProfit = (resItem.sellOrderPrice !== Infinity) ? (resItem.sellOrderPrice * (1 - taxRate) - stepCost) : 0;
+                const effPerCraft = dl.crafts1 > 0 ? (stepProfit / dl.crafts1) : 0;
+                return `
+                  <button type="button" class="depth-step-btn ${isActive ? 'active' : ''}" onclick="setDrawerDepthStep(${shardIdx}, ${dl.level})">
+                    <div class="depth-step-top">
+                      <span class="depth-step-num">Step ${dl.level}${dl.level === 1 ? ' (Direct)' : ''}</span>
+                      ${isSmart ? '<span class="pill-badge pill-smart">⭐ Optimal</span>' : ''}
+                    </div>
+                    <div class="depth-step-stat">${dl.crafts1} craft${dl.crafts1 > 1 ? 's' : ''} / shard</div>
+                    <div class="depth-step-stat" style="color:var(--accent-cyan);">Cost: ${formatCoinMillions(stepCost)}</div>
+                    <div class="depth-step-eff" style="color:${effPerCraft > 0 ? 'var(--accent-emerald)' : 'var(--accent-red)'};">
+                      ⚡ +${formatCoinMillions(effPerCraft)} / fusion
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+            ${resItem.depthLevels.length > 1 ? `
+              <div class="depth-compare-insight">
+                💡 <strong>Efficiency Insight:</strong> 
+                ${(() => {
+                  const deepest = resItem.depthLevels[resItem.depthLevels.length - 1];
+                  const recommended = resItem.depthLevels.find(dl => dl.level === resItem.bestLevel) || resItem.depthLevels[0];
+                  if (deepest.level > recommended.level) {
+                    const extraCrafts = (deepest.crafts1 - recommended.crafts1);
+                    const coinDiff = (recommended.cost - deepest.cost);
+                    const rate = extraCrafts > 0 ? (coinDiff / extraCrafts) : 0;
+                    return `Step ${recommended.level} is recommended. Step ${deepest.level} adds <strong>+${extraCrafts} fusions per shard</strong> for only <strong>+${formatCoinMillions(coinDiff)} extra profit</strong> (+${formatCoinMillions(rate)}/extra craft) — not worth the extra time!`;
+                  } else {
+                    return `Step ${recommended.level} delivers the highest profit while maintaining excellent fusion click efficiency.`;
+                  }
+                })()}
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
 
         <!-- Materials Needed Panel -->
         <div class="section-title">
