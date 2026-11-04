@@ -30,13 +30,13 @@
       --accent-red: #f87171;
 
       /* Vertical Column Background Tints from Screenshot */
-      --col1-tint: rgba(15, 23, 42, 0.75);
-      --col2-tint: rgba(30, 58, 138, 0.10);
-      --col3-tint: rgba(88, 28, 135, 0.16);
-      --col4-tint: rgba(14, 116, 144, 0.10);
-      --col5-tint: rgba(6, 78, 59, 0.22);
-      --col6-tint: rgba(15, 23, 42, 0.85);
-      --col7-tint: rgba(15, 23, 42, 0.75);
+      --col1-tint: rgba(15, 23, 42, 0.45);
+      --col2-tint: rgba(30, 58, 138, 0.08);
+      --col3-tint: rgba(88, 28, 135, 0.10);
+      --col4-tint: rgba(14, 116, 144, 0.08);
+      --col5-tint: rgba(6, 78, 59, 0.14);
+      --col6-tint: rgba(15, 23, 42, 0.50);
+      --col7-tint: rgba(15, 23, 42, 0.40);
 
       /* Rarity colors */
       --rarity-common: #cbd5e1;
@@ -64,70 +64,76 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1360px;
       margin: 0 auto;
-      padding: 24px 16px 64px;
+      padding: 12px 14px 48px;
     }
 
     /* Top Header Block */
     .header-block {
-      margin-bottom: 18px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-title-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .eyebrow {
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 0.14em;
       font-weight: 700;
       color: var(--accent-cyan);
       text-transform: uppercase;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .eyebrow .pulse-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       background-color: var(--accent-cyan);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent-cyan);
+      box-shadow: 0 0 6px var(--accent-cyan);
       animation: pulse 2s infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
     .page-title {
-      font-size: 28px;
+      font-size: 18px;
       font-weight: 800;
       color: #f8fafc;
-      margin: 4px 0 6px;
+      margin: 0;
       letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
-    .page-subtitle {
-      font-size: 13px;
+    .page-tagline {
+      font-size: 11.5px;
       color: var(--text-muted);
-      max-width: 880px;
-      line-height: 1.55;
     }
 
     /* Top Control Panel Card */
     .control-card {
       background: var(--bg-card);
       border: 1px solid var(--border-main);
-      border-radius: 14px;
-      padding: 18px 20px;
-      margin-bottom: 18px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     }
 
     .action-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 8px;
       align-items: flex-end;
     }
 
@@ -158,9 +164,9 @@
     }
 
     .field-label {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--text-muted);
-      margin-bottom: 5px;
+      margin-bottom: 3px;
       font-weight: 600;
       letter-spacing: 0.02em;
     }
@@ -168,11 +174,11 @@
     .text-input, .select-input {
       background: var(--bg-input);
       border: 1px solid var(--border-main);
-      border-radius: 8px;
-      padding: 9px 12px;
+      border-radius: 6px;
+      padding: 5px 9px;
       color: var(--text-main);
-      font-size: 13px;
-      font-family: inherit;
+      font-size: 12px;
+      height: 31px;
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
@@ -570,7 +576,7 @@
     }
 
     .scanner-table th {
-      padding: 10px 8px;
+      padding: 6px 8px;
       border-bottom: 1px solid var(--border-main);
       font-weight: 700;
       vertical-align: bottom;
@@ -579,7 +585,7 @@
     }
 
     .th-line1 {
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       font-weight: 700;
@@ -587,10 +593,10 @@
     }
 
     .th-line2 {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 400;
       color: var(--text-dim);
-      margin-top: 2px;
+      margin-top: 1px;
       text-transform: lowercase;
       white-space: nowrap;
     }
@@ -620,9 +626,9 @@
     }
 
     .scanner-table td {
-      padding: 10px 8px;
-      border-bottom: 1px solid rgba(30, 41, 59, 0.6);
-      font-size: 13px;
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12.5px;
       vertical-align: middle;
       white-space: nowrap;
     }
@@ -1240,15 +1246,15 @@
     .stat-card {
       background: #0f172a;
       border: 1px solid var(--border-main);
-      border-radius: 10px;
-      padding: 12px 14px;
+      border-radius: 8px;
+      padding: 8px 10px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .stat-card-title {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -1257,7 +1263,7 @@
 
     .stat-card-val {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 16px;
+      font-size: 14.5px;
       font-weight: 800;
       color: #f8fafc;
     }
@@ -1471,14 +1477,14 @@
     
     <!-- Top Header Block -->
     <header class="header-block">
-      <div class="eyebrow">
-        <span class="pulse-dot"></span>
-        HYPIXEL SKYBLOCK · BAZAAR
+      <div class="header-title-wrap">
+        <div class="eyebrow">
+          <span class="pulse-dot"></span>
+          HYPIXEL SKYBLOCK · BAZAAR
+        </div>
+        <h1 class="page-title">Shard Market Scanner</h1>
+        <span class="page-tagline">Recursive Fusion &amp; Instant-Sell Profit Optimizer</span>
       </div>
-      <h1 class="page-title">Shard Market Scanner</h1>
-      <p class="page-subtitle">
-        Compare live Bazaar prices, four-level fusion costs, and instant-sell opportunities. Uses in-game accurate Crocodile Pure Reptile mechanics and a configurable fusion fee (default 1,000 coins per craft). Prices refresh automatically every five minutes.
-      </p>
     </header>
 
     <!-- Top Control Panel Card -->
@@ -1523,64 +1529,43 @@
       </div>
 
       <!-- Middle 3-Column Toggle Grid -->
-      <div class="toggle-grid">
-        
-        <!-- Option Card 1 -->
-        <div class="toggle-card">
-          <label class="toggle-header">
+      <div class="secondary-toolbar">
+        <!-- Quick Toggles Strip -->
+        <div class="quick-toggles-group">
+          <label class="compact-check" title="Visually highlights instant-sell opportunities with green badges in the table">
             <input type="checkbox" id="checkHighlightInstant" checked onchange="onSettingChange()">
-            <span class="toggle-title">Highlight instant-sell profit badges</span>
+            <span>⚡ Highlight Instant</span>
           </label>
-          <p class="toggle-helper">
-            When on, visually highlights instant-sell opportunities with green badges and instant cash-out rates in the table. Uses your configured threshold (default 1 coin).
-          </p>
-        </div>
 
-        <!-- Option Card 2 -->
-        <div class="toggle-card">
-          <label class="toggle-header">
+          <label class="compact-check" title="Price Chameleon inputs at current highest buy order instead of instant-buy offer">
             <input type="checkbox" id="checkChameleonBuyOrder" onchange="onSettingChange()">
-            <span class="toggle-title">Use buy-order price for Chameleon ingredients</span>
+            <span>🦎 Chameleon Buy-Order</span>
           </label>
-          <p class="toggle-helper">
-            Price Chameleon inputs at the current highest buy order instead of their instant-buy offer. Assumes your buy order fills; applies to all fusion levels.
-          </p>
-        </div>
 
-        <!-- Option Card 3 -->
-        <div class="toggle-card">
-          <div class="fee-row">
-            <div>
-              <div class="toggle-title">Fusion cost per craft</div>
-              <p class="toggle-helper">
-                Coins charged for each fusion, including intermediate crafts. Changes instantly recalculate prices and profits.
-              </p>
-            </div>
-            <div class="fee-input-wrap">
-              <input type="number" id="feeInput" class="fee-input" value="0" min="0" step="100" oninput="onSettingChange()">
-              <span class="fee-unit">coins</span>
-            </div>
+          <div class="compact-fee-group" title="Coins charged for each fusion craft (including intermediate steps)">
+            <span class="compact-fee-label">Craft Fee:</span>
+            <input type="number" id="feeInput" class="compact-fee-input" value="0" min="0" step="100" oninput="onSettingChange()">
+            <span class="fee-unit">coins</span>
           </div>
         </div>
 
-      </div>
+        <div class="toolbar-divider"></div>
 
-      <!-- Bottom Status & More options Bar -->
-      <div class="status-bar">
+        <!-- Live Status Indicators -->
         <div class="status-summary" id="statusSummary">
           <span class="status-highlight" id="statusShards">Loaded 322 shard markets</span> · 
-          <span id="statusRecipes">131,512 recipe options</span> · 
-          <span id="statusLevels">Smart Optimal depth</span> · 
-          <span id="statusFee">0 coins/craft.</span>
+          <span id="statusRecipes">131,512 recipes</span> · 
+          <span id="statusLevels">Smart Optimal</span> · 
+          <span id="statusFee">0 coins/craft</span>
         </div>
 
+        <!-- Pills & Panels Toggles -->
         <div class="status-pills">
-          <div class="pill-badge" id="snapshotBadge">Data snapshot: Initializing · Auto-refresh &lt; 5 min</div>
-          <!-- 1-Click Tax Toggle Pill (Fix 3) -->
-          <button id="taxTogglePill" class="pill-btn" onclick="toggleTaxRatePill()" title="Click to toggle Bazaar Tax between 1.25% (Standard) and 0% (Raw Reference Scanner Mode)">
-            Tax: 1.25% (Standard) ▾
+          <div class="pill-badge" id="snapshotBadge">Data snapshot: Initializing</div>
+          <button id="taxTogglePill" class="pill-btn" onclick="toggleTaxRatePill()" title="Click to toggle Bazaar Tax between 1.25% (Standard) and 0% (Raw Scanner)">
+            Tax: 1.25% ▾
           </button>
-          <button id="debugTogglePill" class="pill-btn" onclick="toggleDebugMode()" title="Toggle Route Efficiency Debug Mode: reveals discarded higher-step routes, rejected fusion bloat, and step comparison trade-offs">
+          <button id="debugTogglePill" class="pill-btn" onclick="toggleDebugMode()" title="Toggle Route Efficiency Debug Mode: reveals discarded higher-step routes and fusion bloat">
             🔬 Debug: OFF
           </button>
           <button class="btn-more-options" onclick="toggleGuide()">
@@ -1755,28 +1740,27 @@
             </th>
             <th class="th-col2">
               <div class="th-line1">SELL ORDER PRICE</div>
-              <div class="th-line2">lowest current offer</div>
+              <div class="th-line2">lowest offer</div>
             </th>
             <th class="th-col3">
               <div class="th-line1">BUY ORDER PRICE</div>
-              <div class="th-line2">highest current bid</div>
+              <div class="th-line2">highest bid</div>
             </th>
             <th class="th-col4">
               <div class="th-line1">COST TO FUSE</div>
-              <div class="th-line2">coins per shard</div>
+              <div class="th-line2">coins / shard</div>
             </th>
             <th class="th-col5">
               <div class="th-line1">FUSION PROFIT</div>
-              <div class="th-line2">offer - cost · instant sell &gt; 15k</div>
+              <div class="th-line2">net profit / shard</div>
             </th>
             <th class="th-col6">
-              <div class="th-line1">OUTGOING SELL OFFERS</div>
-              <div class="th-line2">active sell orders · profitable buy depth</div>
+              <div class="th-line1">ORDERS / DEPTH</div>
+              <div class="th-line2">sell orders · instant depth</div>
             </th>
             <th class="th-col7">
               <div class="th-line1">BOUGHT (7D)</div>
-              <!-- Fix 4: exact camelCase buyMovingWeek · per hour -->
-              <div class="th-line2">buyMovingWeek · per hour</div>
+              <div class="th-line2">total · per hour</div>
             </th>
           </tr>
         </thead>
@@ -2841,16 +2825,19 @@
             <td class="col-tint-1">
               <div class="shard-name-wrap">
                 <div class="shard-title-row">
-                  <span>${rank}. ${item.name}</span>
+                  <span class="shard-rank">${rank}.</span>
+                  <span class="shard-name">${item.name}</span>
                   <a href="https://skyblock.bz/product/${item.internal_id}" target="_blank" rel="noopener" class="shard-link" title="Open on skyblock.bz">↗</a>
+                  ${(item.isInstantProfitable && highlightInstant) ? '<span class="pill-instant-profit">⚡ Instant</span>' : ''}
                 </div>
-                <div class="shard-id-code">${item.internal_id}</div>
-                ${(item.isInstantProfitable && highlightInstant) ? '<div class="pill-instant-profit">INSTANT-SELL PROFIT</div>' : ''}
-                ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
-                  <div class="pill-debug-discarded" title="Smart Solver pruned Step ${item.primaryDiscarded.level} (+${item.primaryDiscarded.extraCrafts} crafts for only +${formatCoinMillions(item.primaryDiscarded.coinGain)}, rate: +${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)">
-                    🔬 Pruned Step ${item.primaryDiscarded.level}: +${item.primaryDiscarded.extraCrafts} crafts avoided
-                  </div>
-                ` : ''}
+                <div class="shard-sub-row">
+                  <span class="shard-id-code">${item.internal_id}</span>
+                  ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
+                    <span class="pill-debug-discarded" title="Smart Solver pruned Step ${item.primaryDiscarded.level} (+${item.primaryDiscarded.extraCrafts} crafts for only +${formatCoinMillions(item.primaryDiscarded.coinGain)}, rate: +${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)">
+                      🔬 Pruned Step ${item.primaryDiscarded.level} (+${item.primaryDiscarded.extraCrafts} crafts avoided)
+                    </span>
+                  ` : ''}
+                </div>
               </div>
             </td>
 
@@ -2866,21 +2853,20 @@
 
             <!-- Col 4: Cost to Fuse -->
             <td class="col-tint-4">
-              <div class="col4-top-wrap">
-                ${maxFlipBadgeHtml}
-                <div class="col4-val-group">
-                  <div class="fuse-cost-val">${costToFuseStr}</div>
-                  <div class="cell-sublabel">coins per shard</div>
-                  ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
-                    <div class="debug-cost-sub" title="Step ${item.primaryDiscarded.level} cost: ${formatCoinMillions(item.primaryDiscarded.cost)} (${item.primaryDiscarded.crafts}x crafts)">
-                      Step ${item.bestLevel} active · Step ${item.primaryDiscarded.level} pruned
-                    </div>
-                  ` : ''}
+              <div class="col4-val-group">
+                <div class="col4-top-line">
+                  ${maxFlipBadgeHtml}
+                  <span class="fuse-cost-val">${costToFuseStr}</span>
                 </div>
+                ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
+                  <div class="debug-cost-sub" title="Step ${item.primaryDiscarded.level} cost: ${formatCoinMillions(item.primaryDiscarded.cost)} (${item.primaryDiscarded.crafts}x crafts)">
+                    Step ${item.bestLevel} · Step ${item.primaryDiscarded.level} pruned
+                  </div>
+                ` : ''}
               </div>
               ${item.costToFuse !== Infinity ? `
                 <button class="btn-toggle-route" onclick="toggleRouteDrawer(${item.idx})">
-                  <span>${isExpanded ? '▾ Hide recursive route' : '▸ View recursive route'}</span>
+                  <span>${isExpanded ? '▾ Close' : '▸ Route'}</span>
                   ${hasLowSupplyRoute ? '<span class="low-supply-badge-inline" title="At least one ingredient has fewer than 20 available in sell offers">⚠️ Low Supply</span>' : ''}
                 </button>
               ` : ''}
@@ -2889,8 +2875,7 @@
             <!-- Col 5: Fusion Profit -->
             <td class="col-tint-5">
               <div class="profit-val ${item.fusionProfit < 0 ? 'negative' : ''}">${fusionProfitStr}</div>
-              <div class="cell-sublabel" style="color:var(--accent-emerald-soft);">coins per shard</div>
-              ${(instantSellStr && highlightInstant) ? `<div class="instant-profit-sub">Instant sell: ${instantSellStr}</div>` : ''}
+              ${(instantSellStr && highlightInstant) ? `<div class="instant-profit-sub">Instant: ${instantSellStr}</div>` : ''}
               ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
                 <div class="debug-profit-sub" title="Step ${item.primaryDiscarded.level} offered only +${formatCoinMillions(item.primaryDiscarded.coinGain)} for +${item.primaryDiscarded.extraCrafts} crafts">
                   Avoided +${item.primaryDiscarded.extraCrafts} crafts (+${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)
@@ -2898,7 +2883,7 @@
               ` : ''}
               ${item.bestProfitPerFusion > 0 ? `
                 <div class="fusion-rate-sub" title="Profit divided by number of fusions needed. Producing 1 shard requires ${item.craftsNeeded1} in-game craft(s).">
-                  ⚡ +${formatCoinMillions(item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : item.profitPerFusionOffer)} / fusion <span style="color:var(--text-dim); font-size:9.5px;">(${item.craftsNeeded1}x)</span>
+                  ⚡ +${formatCoinMillions(item.profitPerFusionInstant > 0 ? item.profitPerFusionInstant : item.profitPerFusionOffer)}/fuse <span style="color:var(--text-dim); font-size:9.5px;">(${item.craftsNeeded1}x)</span>
                 </div>
               ` : ''}
             </td>
@@ -2908,7 +2893,7 @@
               <div class="split-metric-wrap">
                 <div class="metric-side">
                   <span class="metric-val">${item.activeSellOrders.toLocaleString()}</span>
-                  <span class="metric-sub">sell orders</span>
+                  <span class="metric-sub">orders</span>
                 </div>
                 <div class="metric-side">
                   <span class="metric-val amber">${item.profitableBuyDepth.toLocaleString()}</span>
@@ -2920,7 +2905,7 @@
             <!-- Col 7: Volume (Fix 4: camelCase buyMovingWeek) -->
             <td class="col-tint-7">
               <div class="vol-val">${Math.round(item.vol7d).toLocaleString()}</div>
-              <div class="cell-sublabel">~${item.hourlyVelocity.toLocaleString()} / hour</div>
+              <div class="cell-sublabel">~${item.hourlyVelocity.toLocaleString()} / hr</div>
             </td>
           </tr>
 
