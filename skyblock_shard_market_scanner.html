@@ -1506,8 +1506,9 @@
           <label class="field-label" for="profitFilterSelect">Profit Filter</label>
           <select id="profitFilterSelect" class="select-input" onchange="onFilterChange()">
             <option value="all">Show All Shards</option>
-            <option value="sellOrder">💰 Sell-Order Profitable Only</option>
+            <option value="instantBatch">🔥 Profitable Batch Flips Only</option>
             <option value="instant">⚡ Instant-Sell Profitable Only</option>
+            <option value="sellOrder">💰 Sell-Order Profitable Only</option>
             <option value="both">💎 Both Sell-Order &amp; Instant</option>
             <option value="discarded">🔬 Step-Optimized Only (Discarded Bloat)</option>
           </select>
@@ -1516,8 +1517,9 @@
         <div class="field-group">
           <label class="field-label" for="rankSelect">Rank by</label>
           <select id="rankSelect" class="select-input" onchange="onRankChange()">
+            <option value="batchInstantProfit" selected>🔥 Highest Instant-Sell profit / batch (total flip profit)</option>
+            <option value="instantProfit">⚡ Highest Instant-Sell profit / shard (per individual shard)</option>
             <option value="sellOrderProfit">💰 Highest Sell-Order profit (if sell order is put up)</option>
-            <option value="instantProfit" selected>⚡ Highest Instant-Sell profit (instant cash-out to buy orders)</option>
             <option value="profitPerFusion">⚡ Highest profit / fusion (most time-efficient)</option>
             <option value="profitPerFusionOffer">📦 Highest Sell-Order profit / fusion</option>
           </select>
@@ -2661,9 +2663,25 @@
     }
 
     // --- UI RENDERING & SORTING ---
+    function computeBatchProfits() {
+      if (!solverResults || !solverResults.results) return;
+      for (let i = 0; i < solverResults.results.length; i++) {
+        const item = solverResults.results[i];
+        if (item.costToFuse !== Infinity && item.profitableBuyDepth > 0 && item.instantProfit > 0) {
+          const opt = findOptimalBatchSize(item.idx, solverResults.taxRate, solverResults.crocMultiplier, solverResults.purseBudget);
+          item.batchInstantProfit = (opt && opt.maxProfit > 0) ? opt.maxProfit : 0;
+          item.optimalBatchQ = (opt && opt.optimalQ > 0) ? opt.optimalQ : 1;
+        } else {
+          item.batchInstantProfit = 0;
+          item.optimalBatchQ = 1;
+        }
+      }
+    }
+
     function runSolverAndRender() {
       solverResults = solveFusionCosts();
       if (!solverResults) return;
+      computeBatchProfits();
       updateTaxTogglePill();
       renderTable();
       if (expandedDrawerShardIdx !== null) {
@@ -2721,7 +2739,9 @@
         );
       }
 
-      if (profitFilter === 'sellOrder') {
+      if (profitFilter === 'instantBatch') {
+        items = items.filter(it => it.batchInstantProfit > 0 && it.costToFuse !== Infinity);
+      } else if (profitFilter === 'sellOrder') {
         items = items.filter(it => it.fusionProfit > 0 && it.costToFuse !== Infinity);
       } else if (profitFilter === 'instant') {
         items = items.filter(it => it.instantProfit > 0 && it.costToFuse !== Infinity);
@@ -2741,12 +2761,18 @@
       function baseCompare(a, b) {
         let diff = 0;
         switch (rankBy) {
-          case 'sellOrderProfit':
-          case 'fusionProfit':
-            diff = b.fusionProfit - a.fusionProfit;
+          case 'batchInstantProfit':
+            diff = b.batchInstantProfit - a.batchInstantProfit;
+            if (diff === 0) {
+              diff = b.instantProfit - a.instantProfit;
+            }
             break;
           case 'instantProfit':
             diff = b.instantProfit - a.instantProfit;
+            break;
+          case 'sellOrderProfit':
+          case 'fusionProfit':
+            diff = b.fusionProfit - a.fusionProfit;
             break;
           case 'profitPerFusion':
             diff = b.bestProfitPerFusion - a.bestProfitPerFusion;
@@ -2808,15 +2834,12 @@
 
         // Optimal batch calculation for the quick preview badge
         let maxFlipBadgeHtml = '';
-        if (item.costToFuse !== Infinity && item.profitableBuyDepth > 0) {
-          const opt = findOptimalBatchSize(item.idx, solverResults.taxRate, solverResults.crocMultiplier, solverResults.purseBudget);
-          if (opt && opt.maxProfit > 0) {
-            maxFlipBadgeHtml = `
-              <button class="badge-max-flip" onclick="event.stopPropagation(); openRouteWithOptimalBatch(${item.idx}, ${opt.optimalQ})" title="Max Profitable Flip: ${opt.optimalQ}x shards (+${formatCoinMillions(opt.maxProfit)} net instant profit). Click to view route.">
-                🔥 ${opt.optimalQ}x: +${formatCoinMillions(opt.maxProfit)}
-              </button>
-            `;
-          }
+        if (item.batchInstantProfit > 0) {
+          maxFlipBadgeHtml = `
+            <button class="badge-max-flip" onclick="event.stopPropagation(); openRouteWithOptimalBatch(${item.idx}, ${item.optimalBatchQ})" title="Max Profitable Flip: ${item.optimalBatchQ}x shards (+${formatCoinMillions(item.batchInstantProfit)} net instant profit). Click to view route.">
+              🔥 ${item.optimalBatchQ}x: +${formatCoinMillions(item.batchInstantProfit)}
+            </button>
+          `;
         }
 
         html += `
@@ -2875,7 +2898,11 @@
             <!-- Col 5: Fusion Profit -->
             <td class="col-tint-5">
               <div class="profit-val ${item.fusionProfit < 0 ? 'negative' : ''}">${fusionProfitStr}</div>
-              ${(instantSellStr && highlightInstant) ? `<div class="instant-profit-sub">Instant: ${instantSellStr}</div>` : ''}
+              ${item.batchInstantProfit > 0 ? `
+                <div class="instant-profit-sub" style="color:#fbbf24;" title="Total net instant-sell profit for optimal batch (${item.optimalBatchQ}x shards)">
+                  🔥 Batch: +${formatCoinMillions(item.batchInstantProfit)} <span style="font-size:9px; color:var(--text-dim);">(${item.optimalBatchQ}x)</span>
+                </div>
+              ` : (instantSellStr && highlightInstant ? `<div class="instant-profit-sub">Instant: ${instantSellStr}</div>` : '')}
               ${(isDebugMode && item.hasDiscardedBloat && item.primaryDiscarded) ? `
                 <div class="debug-profit-sub" title="Step ${item.primaryDiscarded.level} offered only +${formatCoinMillions(item.primaryDiscarded.coinGain)} for +${item.primaryDiscarded.extraCrafts} crafts">
                   Avoided +${item.primaryDiscarded.extraCrafts} crafts (+${formatCoinMillions(item.primaryDiscarded.marginalRate)}/craft)
