@@ -1469,6 +1469,132 @@
       display: none;
       animation: fadeIn 0.2s;
     }
+
+    /* Secondary toolbar: quick toggles, status, pills */
+    .secondary-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .quick-toggles-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .compact-check,
+    .compact-fee-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-main);
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #cbd5e1;
+      white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .compact-check {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .compact-check:hover,
+    .compact-fee-group:focus-within {
+      border-color: var(--border-accent);
+      background: #0d1424;
+    }
+
+    .compact-check input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+      margin: 0;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .compact-check:has(input:checked) {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f1f5f9;
+    }
+
+    .compact-fee-label {
+      color: var(--text-muted);
+    }
+
+    .compact-fee-input {
+      width: 64px;
+      height: 20px;
+      padding: 0 6px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border-accent);
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-align: right;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+
+    .compact-fee-input::-webkit-outer-spin-button,
+    .compact-fee-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .compact-fee-input:focus {
+      border-bottom-color: var(--accent-cyan);
+    }
+
+    .compact-fee-group .fee-unit {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border-main);
+    }
+
+    .secondary-toolbar .status-summary {
+      flex: 1 1 260px;
+      font-size: 11px;
+      color: var(--text-dim);
+      min-width: 0;
+    }
+
+    .secondary-toolbar .status-pills {
+      gap: 6px;
+    }
+
+    .secondary-toolbar .pill-badge,
+    .secondary-toolbar .pill-btn,
+    .secondary-toolbar .btn-more-options {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 11px;
+    }
+
+    @media (max-width: 820px) {
+      .toolbar-divider { display: none; }
+      .secondary-toolbar .status-summary { flex-basis: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -1517,11 +1643,11 @@
         <div class="field-group">
           <label class="field-label" for="rankSelect">Rank by</label>
           <select id="rankSelect" class="select-input" onchange="onRankChange()">
-            <option value="batchInstantProfit" selected>🔥 Highest Instant-Sell profit / batch (total flip profit)</option>
-            <option value="instantProfit">⚡ Highest Instant-Sell profit / shard (per individual shard)</option>
-            <option value="sellOrderProfit">💰 Highest Sell-Order profit (if sell order is put up)</option>
-            <option value="profitPerFusion">⚡ Highest profit / fusion (most time-efficient)</option>
-            <option value="profitPerFusionOffer">📦 Highest Sell-Order profit / fusion</option>
+            <option value="batchInstantProfit" selected>🔥 Instant-sell profit / batch</option>
+            <option value="instantProfit">⚡ Instant-sell profit / shard</option>
+            <option value="sellOrderProfit">💰 Sell-order profit / shard</option>
+            <option value="profitPerFusion">⚡ Profit / fusion (time-efficient)</option>
+            <option value="profitPerFusionOffer">📦 Sell-order profit / fusion</option>
           </select>
         </div>
 
